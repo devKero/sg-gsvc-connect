@@ -3430,7 +3430,7 @@ function updateMyInquiriesCount() {
     countEl.innerText = "0";
     return;
   }
-  const myCount = state.inquiries.filter(i => i.studentId === state.currentUser.id).length;
+  const myCount = state.inquiries.filter(i => i.studentId === state.currentUser.id && i.status !== 'deleted').length;
   countEl.innerText = String(myCount);
 }
 
@@ -3508,7 +3508,7 @@ function renderMyInquiries() {
     return;
   }
 
-  const myInqs = state.inquiries.filter(i => i.studentId === state.currentUser.id);
+  const myInqs = state.inquiries.filter(i => i.studentId === state.currentUser.id && i.status !== 'deleted');
   if (myInqs.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--color-text-dim);"><i class="fa-regular fa-folder-open" style="font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i> 아직 등록된 문의 내역이 없습니다.</div>`;
     return;
@@ -3531,7 +3531,7 @@ function renderMyInquiries() {
       <div style="font-size:0.7rem; color:var(--color-text-dim); text-align:right;">${formattedDate}</div>
       ${inq.reply ? `
         <div class="inquiry-reply-box">
-          <strong style="color:var(--color-sogang); font-size:0.75rem;"><i class="fa-solid fa-reply"></i> 운영진 답변${inq.repliedBy ? ` (답변자: ${escapeHtml(inq.repliedBy)})` : ''}</strong>
+          <strong style="color:var(--color-sogang); font-size:0.75rem;"><i class="fa-solid fa-reply"></i> 운영진 답변</strong>
           <p style="margin-top:0.25rem; font-size:0.8rem; line-height:1.4; color:var(--color-text-main); white-space:pre-wrap;">${escapeHtml(inq.reply)}</p>
         </div>
       ` : ''}
