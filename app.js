@@ -1956,15 +1956,10 @@ function openProfileModal(memberId) {
     });
   }
 
-  // 2. 편집 권한 체크 (원우 본인의 직접 수정은 차단하며, 오직 최고 관리자(admin)만 멤버 카드 수정이 가능합니다)
+  // 2. 편집 권한 체크 (상세 페이지 내의 직접 수정 버튼은 완전히 제거합니다. 관리자도 운영 관리 탭에서만 수정합니다.)
   const editBtn = document.getElementById('editProfileBtn');
-  const canEdit = state.currentUser && !state.currentUser.isGuest && state.isAdmin;
   if (editBtn) {
-    if (canEdit) {
-      editBtn.classList.remove('hidden');
-    } else {
-      editBtn.classList.add('hidden');
-    }
+    editBtn.classList.add('hidden');
   }
 
   // 3. 편집 모드 양식 데이터 채워넣기 (이름, 전공, 기수, 자유기재 추가)
