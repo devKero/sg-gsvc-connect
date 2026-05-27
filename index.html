@@ -46,6 +46,10 @@
           <label for="phoneLast4">비밀번호 (일반 원우는 휴대폰 뒷자리 4자리)</label>
           <input type="password" id="phoneLast4" required placeholder="비밀번호 또는 4자리 숫자 입력">
         </div>
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem; margin-bottom: 1.2rem; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="rememberMe" style="cursor: pointer; width: 16px; height: 16px;">
+          <label for="rememberMe" style="font-size: 0.8rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer; margin: 0;">로그인 정보 기억하기</label>
+        </div>
         <div id="loginError" class="alert alert-danger hidden" role="alert">
           <i class="fa-solid fa-circle-exclamation"></i> 학번 또는 비밀번호가 일치하지 않습니다.
         </div>

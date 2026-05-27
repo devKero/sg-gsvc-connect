@@ -610,6 +610,23 @@ function checkSession() {
     enterDashboard();
   } else {
     showLoginGate();
+    
+    // 저장된 로그인 정보(학번 및 비밀번호) 로드 및 주입
+    const remembered = localStorage.getItem('sogang_gsvc_remember');
+    if (remembered) {
+      try {
+        const { studentId, phoneLast4 } = JSON.parse(remembered);
+        const studentIdEl = document.getElementById('studentId');
+        const phoneLast4El = document.getElementById('phoneLast4');
+        const rememberMeEl = document.getElementById('rememberMe');
+        
+        if (studentIdEl) studentIdEl.value = studentId;
+        if (phoneLast4El) phoneLast4El.value = phoneLast4;
+        if (rememberMeEl) rememberMeEl.checked = true;
+      } catch (e) {
+        console.error("저장된 로그인 정보 복원 실패:", e);
+      }
+    }
   }
 }
 
@@ -998,6 +1015,14 @@ function handleLogin(e) {
   if (matchedMember) {
     errorEl.classList.add('hidden');
     
+    // 로그인 정보 저장/삭제 처리
+    const rememberMe = document.getElementById('rememberMe').checked;
+    if (rememberMe) {
+      localStorage.setItem('sogang_gsvc_remember', JSON.stringify({ studentId, phoneLast4 }));
+    } else {
+      localStorage.removeItem('sogang_gsvc_remember');
+    }
+
     state.isAdmin = (matchedMember.role === "super_admin" || matchedMember.role === "admin");
     state.isSuperAdmin = (matchedMember.role === "super_admin");
     state.currentUser = {
