@@ -1539,11 +1539,12 @@ a {
   }
 
   .navbar {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
+    height: 50px;
   }
 
   .navbar-left {
-    flex: 1 1 0%;
+    flex: 0 0 auto;
     gap: 0.5rem;
   }
 
@@ -1554,14 +1555,50 @@ a {
   .navbar-right {
     flex: 1 1 0%;
     justify-content: flex-end;
+    gap: 0.6rem;
   }
 
   .nav-title {
     display: none; /* 모바일에서 타이틀 숨겨서 공간 확보 */
   }
 
+  /* 네비바 버튼 아이콘 전용 모드 */
+  .nav-tab-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    gap: 0;
+  }
+
+  .btn-text {
+    display: none; /* 모바일에서 버튼 텍스트 숨기고 아이콘만 표시 */
+  }
+
+  .user-name {
+    display: none; /* 아바타만 표시 */
+  }
+
   .search-box input {
     padding-left: 2rem;
+  }
+
+  /* 콘텐츠 헤더 툴바 세로 배치 */
+  .content-header-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.6rem 0.8rem;
+    gap: 0.5rem;
+  }
+
+  .content-header-toolbar h3 {
+    font-size: 0.95rem;
+  }
+
+  .view-toggle-container {
+    width: 100%;
+  }
+  .btn-view-toggle {
+    flex: 1;
+    justify-content: center;
   }
 
   .modal-header-info {
@@ -1587,6 +1624,7 @@ a {
 
   .modal-contact-row {
     justify-content: center;
+    flex-wrap: wrap;
   }
   
   .feed-form-header {
@@ -1624,6 +1662,570 @@ a {
     margin-top: 0.5rem;
     border-top: 1px solid #f3f2ef;
     padding-top: 0.5rem;
+  }
+
+  /* 관리자 대시보드 태블릿/소형 */
+  .admin-dashboard {
+    padding: 1.25rem 1rem;
+  }
+
+  .admin-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .admin-dashboard-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .admin-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .admin-table-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .admin-search-box input {
+    width: 100%;
+  }
+
+  .admin-stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-stat-card {
+    padding: 1rem;
+    gap: 0.8rem;
+  }
+
+  .admin-stat-card .stat-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+  }
+
+  .admin-stat-card .stat-value {
+    font-size: 1.4rem;
+  }
+
+  .admin-stat-card .stat-label {
+    font-size: 0.78rem;
+  }
+
+  /* 모달 패딩 축소 */
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+
+  .modal-content {
+    padding: 1.25rem;
+  }
+
+  .modal-avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+  }
+
+  .modal-section {
+    padding: 0.9rem;
+  }
+
+  /* 알림 팝오버 위치 보정 */
+  .notif-popover {
+    width: min(320px, calc(100vw - 1.5rem));
+    right: -10px;
+  }
+}
+
+/* ==================== 모바일 전용 (≤480px) ==================== */
+@media (max-width: 480px) {
+
+  /* ---- 네비게이션 바 극한 압축 ---- */
+  .navbar {
+    padding: 0.4rem 0.5rem;
+    height: 46px;
+  }
+
+  .nav-logo {
+    width: 24px;
+    height: 24px;
+  }
+
+  .navbar-right {
+    gap: 0.35rem;
+  }
+
+  .nav-tab-btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+  }
+
+  .user-avatar {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+
+  .btn-notif-bell {
+    font-size: 1rem;
+    padding: 0.3rem;
+  }
+
+  /* ---- 디렉토리 레이아웃 ---- */
+  .directory-layout {
+    padding: 0 0.5rem;
+    gap: 0.75rem;
+    margin: 0.75rem auto;
+  }
+
+  /* ---- 사이드바 컴팩트화 ---- */
+  .user-mini-card .mini-card-banner {
+    height: 32px;
+  }
+
+  .user-mini-card .mini-avatar {
+    width: 42px;
+    height: 42px;
+    margin-top: -21px;
+    font-size: 1.1rem;
+  }
+
+  .user-mini-card .mini-card-content {
+    padding: 0 0.8rem 0.8rem;
+  }
+
+  .user-mini-card h3 {
+    font-size: 0.88rem;
+  }
+
+  .generation-filter-panel,
+  .tag-filter-panel {
+    padding: 0.75rem 0.9rem;
+  }
+
+  .generation-filter-panel h4,
+  .tag-filter-panel h4 {
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .filter-tags-list {
+    max-height: 120px !important;
+  }
+
+  /* ---- 콘텐츠 헤더 ---- */
+  .content-header-toolbar {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .content-header-toolbar h3 {
+    font-size: 0.88rem;
+  }
+
+  .content-sub-text {
+    font-size: 0.72rem;
+    color: var(--color-text-dim);
+  }
+
+  .btn-view-toggle {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* ---- 검색바 ---- */
+  .search-bar-row {
+    margin-bottom: 1rem;
+  }
+
+  .search-bar-row .search-box input {
+    font-size: 0.82rem;
+    padding: 0.5rem 0.8rem 0.5rem 2rem;
+  }
+
+  /* ---- 멤버 카드 그리드 (1열 + 컴팩트 세로 카드) ---- */
+  .members-grid.grid-view {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .grid-view .member-card {
+    min-height: auto;
+    text-align: left;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .grid-view .card-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+    margin: 0.75rem auto 0.35rem;
+  }
+
+  .grid-view .card-body {
+    padding: 0 0.75rem 0.6rem;
+  }
+
+  .grid-view .card-name-group {
+    margin-bottom: 0.1rem;
+    text-align: center;
+  }
+
+  .grid-view .card-name-row {
+    justify-content: center;
+  }
+
+  .grid-view .card-name {
+    font-size: 0.88rem;
+  }
+
+  .grid-view .card-class {
+    font-size: 0.68rem;
+  }
+
+  .grid-view .card-headline {
+    font-size: 0.72rem;
+    height: 1.4em;
+    -webkit-line-clamp: 1;
+    margin-top: 0.15rem;
+    text-align: center;
+  }
+
+  .grid-view .card-tags {
+    margin-top: 0.25rem;
+    gap: 0.15rem;
+  }
+
+  .grid-view .card-tag {
+    font-size: 0.58rem;
+    padding: 0.05rem 0.3rem;
+  }
+
+  /* 모바일에서 카드 하단 영역(이메일/SNS/프로필 버튼) 숨김 — 카드 자체 터치로 상세 진입 */
+  .grid-view .card-footer {
+    display: none !important;
+  }
+
+  .grid-view .card-delete-btn {
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
+  }
+
+  /* 이메일 캡슐 모바일 (리스트뷰용) */
+  .card-email-row {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.5rem;
+    margin: 0.1rem 0 0;
+    justify-content: flex-start;
+  }
+
+  /* ---- 리스트뷰 모바일 추가 보정 ---- */
+  .list-view .member-card {
+    padding: 0.75rem;
+    gap: 0.5rem;
+    border-left-width: 3px;
+  }
+
+  .list-view .card-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .list-view .card-name {
+    font-size: 0.82rem;
+  }
+
+  .list-view .card-headline {
+    font-size: 0.72rem;
+  }
+
+  /* ---- 모달 극한 컴팩트 ---- */
+  .modal-card {
+    max-height: 95vh;
+    border-radius: 8px;
+  }
+
+  .modal-content {
+    padding: 1rem 0.75rem;
+  }
+
+  .modal-close-btn {
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+
+  .modal-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 1.6rem;
+  }
+
+  .name-edit-row h2 {
+    font-size: 1.15rem;
+  }
+
+  .modal-class {
+    font-size: 0.8rem;
+  }
+
+  .modal-headline {
+    font-size: 0.85rem;
+    padding-left: 0.5rem;
+  }
+
+  .modal-section {
+    padding: 0.75rem;
+    border-radius: 8px;
+  }
+
+  .modal-section h4 {
+    font-size: 0.85rem;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .section-text {
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+
+  .modal-body-sections {
+    gap: 1rem;
+    padding-top: 1rem;
+  }
+
+  .modal-contact-row .btn {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .btn-edit-profile {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  /* 모달 내 방명록 폼 */
+  .modal-guestbook-form-box {
+    padding: 0.6rem !important;
+  }
+
+  .modal-guestbook-form-box .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 0.4rem !important;
+  }
+
+  /* 편집 모달 */
+  .edit-form .form-group label {
+    font-size: 0.75rem;
+  }
+
+  .edit-form input,
+  .edit-form textarea,
+  .edit-form select {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .edit-form-actions {
+    flex-direction: column-reverse;
+    gap: 0.4rem;
+  }
+
+  .edit-form-actions .btn {
+    width: 100%;
+  }
+
+  /* SNS 링크 행 */
+  .sns-link-row {
+    flex-wrap: wrap;
+  }
+
+  .sns-link-row select {
+    width: 100% !important;
+  }
+
+  /* ---- 방명록 피드 ---- */
+  .feed-section {
+    padding: 0.75rem;
+  }
+
+  .feed-header h3 {
+    font-size: 0.88rem;
+  }
+
+  .feed-input-box {
+    padding: 0.6rem;
+  }
+
+  .comment-card {
+    padding: 0.6rem;
+  }
+
+  .comment-name {
+    font-size: 0.78rem;
+  }
+
+  .comment-body {
+    font-size: 0.78rem;
+  }
+
+  .comment-time {
+    font-size: 0.65rem;
+  }
+
+  /* ---- 관리자 대시보드 극한 ---- */
+  .admin-dashboard {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .admin-dashboard-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .admin-dashboard-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .admin-stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-stat-card {
+    padding: 0.75rem;
+    gap: 0.6rem;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .admin-stat-card .stat-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+
+  .admin-stat-card .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .admin-stat-card .stat-label {
+    font-size: 0.72rem;
+  }
+
+  .admin-table-header {
+    padding: 0.75rem;
+  }
+
+  .admin-table-header h3 {
+    font-size: 1rem;
+  }
+
+  .admin-member-table th {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .admin-member-table td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  /* 관리자 탭 메뉴 */
+  .admin-tab-menu {
+    gap: 0.5rem !important;
+  }
+
+  .admin-tab-menu button {
+    font-size: 0.78rem !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+
+  /* 엑셀 업로드 모달 */
+  .excel-dropzone {
+    padding: 1.5rem 1rem !important;
+  }
+
+  /* ---- 알림 팝오버 ---- */
+  .notif-popover {
+    position: fixed;
+    top: 50px;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+  }
+
+  .notif-item {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .notif-item-body {
+    font-size: 0.72rem;
+  }
+
+  /* ---- 로그인 페이지 미세 조정 ---- */
+  .login-container {
+    padding: 1rem;
+  }
+
+  .login-card {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .brand-logo {
+    width: 56px;
+    height: 56px;
+  }
+
+  .brand-title {
+    font-size: 1.25rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .login-footer .hint {
+    font-size: 0.65rem;
+  }
+
+  /* ---- 문의 모달 ---- */
+  .inquiry-tabs {
+    gap: 0.5rem !important;
+  }
+
+  .inquiry-tabs button {
+    font-size: 0.78rem !important;
+  }
+
+  /* ---- 마크다운 콘텐츠 ---- */
+  .markdown-content {
+    font-size: 0.8rem;
+  }
+
+  .markdown-content h5 {
+    font-size: 0.85rem;
   }
 }
 
