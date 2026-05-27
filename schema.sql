@@ -87,8 +87,12 @@ CREATE TABLE IF NOT EXISTS public.inquiries (
     title text,
     message text NOT NULL,
     reply text,
+    replied_by text, -- 답변한 운영진 기록 추가
     status text DEFAULT 'pending',
     created_at timestamp with time zone DEFAULT now()
 );
 ALTER TABLE public.inquiries DISABLE ROW LEVEL SECURITY;
+
+-- 기존에 inquiries 테이블을 이미 생성한 경우, 아래 명령어를 실행하여 답변자 컬럼을 추가해 주세요:
+-- ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS replied_by text;
 

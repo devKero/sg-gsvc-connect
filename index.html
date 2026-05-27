@@ -291,7 +291,7 @@
                   <th>내용</th>
                   <th style="width: 150px;">작성일</th>
                   <th style="width: 100px;">상태</th>
-                  <th style="width: 320px;">답변 및 관리</th>
+                  <th style="width: 120px;">관리</th>
                 </tr>
               </thead>
               <tbody id="adminInquiryTableBody">
@@ -763,6 +763,58 @@
           <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.8rem;">
             <button type="button" id="btnCancelChangePw" class="btn btn-light">취소</button>
             <button type="submit" class="btn btn-sogang">변경 적용</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 관리자 문의 상세 및 답변 모달 ==================== -->
+  <div id="adminInquiryModal" class="modal-overlay hidden" role="dialog" aria-modal="true" style="z-index: 1070;">
+    <div class="modal-card" style="max-width: 600px; width: 95%;">
+      <button id="closeAdminInquiryModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 1.5rem; max-height: 85vh; overflow-y: auto;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.5rem;">
+          <i class="fa-solid fa-envelope-open-text" style="color: var(--color-sogang);"></i> 문의사항 상세 및 답변 작성
+        </h2>
+        
+        <!-- 문의 정보 요약 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; background-color: #f8fafc; border: 1px solid var(--color-border); padding: 0.8rem; border-radius: var(--radius-md); font-size: 0.85rem; margin-bottom: 1.2rem;">
+          <div><strong>작성자:</strong> <span id="adminInqAuthor">홍길동</span></div>
+          <div><strong>학번:</strong> <span id="adminInqStudentId" style="font-family: monospace;">v2026001</span></div>
+          <div><strong>접수일시:</strong> <span id="adminInqDate">-</span></div>
+          <div><strong>상태:</strong> <span id="adminInqStatusBadge" class="inquiry-status-badge">대기중</span></div>
+        </div>
+
+        <!-- 문의 제목 및 내용 -->
+        <div class="form-group" style="margin-bottom: 1.2rem;">
+          <label style="font-weight: 700; display: block; margin-bottom: 0.3rem; font-size: 0.85rem;">문의 제목</label>
+          <div id="adminInqTitle" style="padding: 0.6rem; background-color: #f1f5f9; border-radius: 4px; font-size: 0.85rem; font-weight: 600; border: 1px solid var(--color-border);">문의 제목이 들어갑니다.</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label style="font-weight: 700; display: block; margin-bottom: 0.3rem; font-size: 0.85rem;">문의 내용</label>
+          <div id="adminInqMessage" style="padding: 0.8rem; background-color: #f1f5f9; border-radius: 4px; font-size: 0.85rem; line-height: 1.5; min-height: 120px; white-space: pre-wrap; word-break: break-all; border: 1px solid var(--color-border);">건의 및 문의내용이 여기에 들어갑니다.</div>
+        </div>
+
+        <!-- 답변 입력 폼 -->
+        <form id="adminReplyForm" style="display: flex; flex-direction: column; gap: 0.8rem; border-top: 2px dashed var(--color-border); padding-top: 1.2rem;">
+          <div class="form-group">
+            <label for="adminReplyAuthor">답변 작성 운영진 이름</label>
+            <input type="text" id="adminReplyAuthor" required placeholder="답변을 작성하는 운영진의 이름을 입력해 주세요 (예: 홍길동 회장)" style="font-size: 0.85rem;">
+          </div>
+          
+          <div class="form-group">
+            <label for="adminReplyText">답변 내용</label>
+            <textarea id="adminReplyText" rows="5" required placeholder="원우의 건의 사항에 대한 성실한 답변을 기재해 주세요..." style="font-family: var(--font-body); font-size: 0.85rem; padding: 0.6rem; border-radius: 4px; border: 1px solid var(--color-border); resize: none;"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+            <button type="button" id="btnAdminDeleteInquiry" class="btn btn-light" style="color: var(--color-sogang); border-color: rgba(179,8,56,0.15); margin-right: auto;">
+              <i class="fa-solid fa-trash-can"></i> 문의 삭제
+            </button>
+            <button type="button" id="btnCancelAdminReply" class="btn btn-light">취소</button>
+            <button type="submit" class="btn btn-sogang">답변 등록 및 저장</button>
           </div>
         </form>
       </div>

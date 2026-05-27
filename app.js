@@ -18,6 +18,7 @@ let state = {
   guestbook: [],
   currentUser: null,       // { id, name, classYear, isGuest, generation }
   selectedMemberId: null,  // 모달에 열린 멤버 ID
+  selectedInquiryId: null, // 모달에 열린 문의 ID
   searchTerm: '',          // 검색어
   adminSearchTerm: '',     // 운영 대시보드 검색어
   adminSelectedGeneration: '', // 운영 대시보드 기수 필터
@@ -503,6 +504,7 @@ async function syncWithSupabase() {
         title: i.title || "",
         message: i.message,
         reply: i.reply || "",
+        repliedBy: i.replied_by || "", // 답변한 운영진 기록 필드 연동
         status: i.status || "pending",
         createdAt: i.created_at
       }));
@@ -761,6 +763,36 @@ function setupEventListeners() {
     }
   });
   document.getElementById('memberAddForm').addEventListener('submit', handleAddMemberSubmit);
+
+  // 관리자 문의 상세 모달 이벤트 바인딩
+  const closeAdminInqModalBtn = document.getElementById('closeAdminInquiryModalBtn');
+  if (closeAdminInqModalBtn) {
+    closeAdminInqModalBtn.addEventListener('click', closeAdminInquiryModal);
+  }
+  const cancelAdminReplyBtn = document.getElementById('btnCancelAdminReply');
+  if (cancelAdminReplyBtn) {
+    cancelAdminReplyBtn.addEventListener('click', closeAdminInquiryModal);
+  }
+  const adminInqModal = document.getElementById('adminInquiryModal');
+  if (adminInqModal) {
+    adminInqModal.addEventListener('click', (e) => {
+      if (e.target.id === 'adminInquiryModal') {
+        closeAdminInquiryModal();
+      }
+    });
+  }
+  const adminReplyForm = document.getElementById('adminReplyForm');
+  if (adminReplyForm) {
+    adminReplyForm.addEventListener('submit', handleAdminReplySubmit);
+  }
+  const adminDeleteInqBtn = document.getElementById('btnAdminDeleteInquiry');
+  if (adminDeleteInqBtn) {
+    adminDeleteInqBtn.addEventListener('click', () => {
+      if (state.selectedInquiryId) {
+        deleteInquiry(state.selectedInquiryId);
+      }
+    });
+  }
 
   // 동적 SNS 링크 추가 버튼 이벤트
   const btnAddEditSnsLink = document.getElementById('btnAddEditSnsLink');
@@ -3304,6 +3336,7 @@ async function handleInquirySubmit(e) {
     title,
     message,
     reply: "",
+    repliedBy: "", // 답변한 운영진 초기화
     status: "pending",
     createdAt: nowStr
   };
@@ -3373,7 +3406,7 @@ function renderMyInquiries() {
       <div style="font-size:0.7rem; color:var(--color-text-dim); text-align:right;">${formattedDate}</div>
       ${inq.reply ? `
         <div class="inquiry-reply-box">
-          <strong style="color:var(--color-sogang); font-size:0.75rem;"><i class="fa-solid fa-reply"></i> 운영진 답변</strong>
+          <strong style="color:var(--color-sogang); font-size:0.75rem;"><i class="fa-solid fa-reply"></i> 운영진 답변${inq.repliedBy ? ` (답변자: ${escapeHtml(inq.repliedBy)})` : ''}</strong>
           <p style="margin-top:0.25rem; font-size:0.8rem; line-height:1.4; color:var(--color-text-main); white-space:pre-wrap;">${escapeHtml(inq.reply)}</p>
         </div>
       ` : ''}
@@ -3556,49 +3589,105 @@ function renderAdminInquiries() {
       <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(inq.author)}</td>
       <td style="font-family: monospace; color: var(--color-text-sub);">${escapeHtml(inq.studentId)}</td>
       <td style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(inq.title || "제목 없음")}</td>
-      <td style="word-break: break-all; line-height: 1.4; max-height: 100px; overflow-y: auto; padding: 0.5rem;">${escapeHtml(inq.message)}</td>
+      <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${escapeHtml(inq.message)}</td>
       <td style="font-size: 0.72rem; color: var(--color-text-dim);">${formattedDate}</td>
       <td><span class="inquiry-status-badge ${statusClass}">${statusText}</span></td>
       <td>
-        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-          <div style="display: flex; gap: 0.3rem; align-items: flex-end;">
-            <textarea class="reply-input-${inq.id}" rows="2" placeholder="답변을 작성해 주세요..." style="flex: 1; font-family: var(--font-body); font-size: 0.78rem; padding: 0.3rem; border: 1px solid var(--color-border); border-radius: 4px; resize: none;">${escapeHtml(inq.reply || "")}</textarea>
-            <button class="btn btn-sogang btn-sm btn-save-reply" data-id="${inq.id}" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 4px; height: 38px;">답변</button>
-          </div>
-          <div style="text-align: right;">
-            <button class="btn btn-light btn-sm btn-delete-inquiry" data-id="${inq.id}" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; color: var(--color-sogang); border-color: rgba(179,8,56,0.15); border-radius: 4px;">
-              <i class="fa-solid fa-trash-can"></i> 삭제
-            </button>
-          </div>
-        </div>
+        <button class="btn btn-light btn-sm btn-open-inquiry" data-id="${inq.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; font-weight: 700;">
+          <i class="fa-solid fa-file-signature"></i> 상세/답변
+        </button>
       </td>
     `;
 
-    // 답변 저장 바인딩
-    tr.querySelector('.btn-save-reply').addEventListener('click', () => {
-      const replyText = tr.querySelector(`.reply-input-${inq.id}`).value.trim();
-      submitAdminReply(inq.id, replyText);
-    });
-
-    // 문의 삭제 바인딩
-    tr.querySelector('.btn-delete-inquiry').addEventListener('click', () => {
-      deleteInquiry(inq.id);
+    // 상세 모달 열기 바인딩
+    tr.querySelector('.btn-open-inquiry').addEventListener('click', () => {
+      openAdminInquiryModal(inq.id);
     });
 
     tbody.appendChild(tr);
   });
 }
 
-// 운영진 답변 저장
-async function submitAdminReply(inquiryId, replyText) {
+// 관리자 문의 상세 및 답변 모달 열기
+function openAdminInquiryModal(inqId) {
+  const inq = state.inquiries.find(i => i.id === inqId);
+  if (!inq) return;
+
+  state.selectedInquiryId = inqId;
+
+  const formattedDate = inq.createdAt ? inq.createdAt.substring(0, 16).replace('T', ' ') : '-';
+  const statusText = inq.status === 'resolved' ? '답변 완료' : '접수 대기';
+  const statusClass = inq.status === 'resolved' ? 'resolved' : 'pending';
+
+  document.getElementById('adminInqAuthor').innerText = inq.author;
+  document.getElementById('adminInqStudentId').innerText = inq.studentId;
+  document.getElementById('adminInqDate').innerText = formattedDate;
+  
+  const badge = document.getElementById('adminInqStatusBadge');
+  badge.innerText = statusText;
+  badge.className = `inquiry-status-badge ${statusClass}`;
+
+  document.getElementById('adminInqTitle').innerText = inq.title || "제목 없음";
+  document.getElementById('adminInqMessage').innerText = inq.message;
+
+  // 답변 작성자 이름 기본값 설정 (기존에 답변한 기록이 있으면 표시, 없으면 현재 로그인 어드민 이름)
+  const replyAuthorInput = document.getElementById('adminReplyAuthor');
+  if (inq.repliedBy) {
+    replyAuthorInput.value = inq.repliedBy;
+  } else {
+    replyAuthorInput.value = state.currentUser ? state.currentUser.name : "운영진";
+  }
+
+  // 답변 텍스트 기본값 설정
+  document.getElementById('adminReplyText').value = inq.reply || "";
+
+  const modal = document.getElementById('adminInquiryModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+// 관리자 문의 상세 및 답변 모달 닫기
+function closeAdminInquiryModal() {
+  const modal = document.getElementById('adminInquiryModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  state.selectedInquiryId = null;
+}
+
+// 관리자 답변 작성 서브밋 핸들러
+async function handleAdminReplySubmit(e) {
+  e.preventDefault();
+
+  if (!state.selectedInquiryId) return;
+
+  const replyText = document.getElementById('adminReplyText').value.trim();
+  const repliedBy = document.getElementById('adminReplyAuthor').value.trim();
+
   if (!replyText) {
     alert("답변 내용을 입력해 주세요.");
     return;
   }
+  if (!repliedBy) {
+    alert("답변 작성 운영진 이름을 입력해 주세요.");
+    return;
+  }
 
+  const success = await submitAdminReply(state.selectedInquiryId, replyText, repliedBy);
+  if (success) {
+    closeAdminInquiryModal();
+  }
+}
+
+// 운영진 답변 저장
+async function submitAdminReply(inquiryId, replyText, repliedBy) {
   const targetInq = state.inquiries.find(i => i.id === inquiryId);
   if (targetInq) {
     targetInq.reply = replyText;
+    targetInq.repliedBy = repliedBy;
     targetInq.status = "resolved";
     localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
   }
@@ -3607,16 +3696,27 @@ async function submitAdminReply(inquiryId, replyText) {
     try {
       const { error } = await supabaseClient
         .from('inquiries')
-        .update({ reply: replyText, status: "resolved" })
+        .update({ 
+          reply: replyText, 
+          replied_by: repliedBy, 
+          status: "resolved" 
+        })
         .eq('id', inquiryId);
       if (error) throw error;
       alert("답변이 정상적으로 등록 및 저장되었습니다.");
       await syncWithSupabase();
       renderAdminInquiries();
+      return true;
     } catch (err) {
       console.error("Supabase 답변 업데이트 실패:", err);
       alert("서버 연결 실패로 인해 로컬 스토리지에만 저장되었습니다.");
+      renderAdminInquiries();
+      return true;
     }
+  } else {
+    alert("로컬 스토리지 모드: 답변이 저장되었습니다.");
+    renderAdminInquiries();
+    return true;
   }
 }
 
@@ -3636,11 +3736,18 @@ async function deleteInquiry(inquiryId) {
         .eq('id', inquiryId);
       if (error) throw error;
       alert("문의 내역이 완전히 삭제되었습니다.");
+      closeAdminInquiryModal();
       await syncWithSupabase();
       renderAdminInquiries();
     } catch (err) {
       console.error("Supabase 문의 삭제 실패:", err);
       alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
+      closeAdminInquiryModal();
+      renderAdminInquiries();
     }
+  } else {
+    alert("로컬 스토리지 모드: 문의가 삭제되었습니다.");
+    closeAdminInquiryModal();
+    renderAdminInquiries();
   }
 }
