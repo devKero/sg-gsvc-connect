@@ -287,11 +287,7 @@ a {
 }
 
 .navbar-center {
-  flex: 0 0 480px;
-  margin: 0 1.5rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: none;
 }
 
 .nav-brand {
@@ -1547,18 +1543,17 @@ a {
   }
 
   .navbar-left {
-    flex: 0 0 auto;
+    flex: 1 1 0%;
     gap: 0.5rem;
   }
 
   .navbar-center {
-    flex: 1;
-    margin: 0 0.5rem;
-    max-width: none;
+    display: none;
   }
 
   .navbar-right {
-    flex: 0 0 auto;
+    flex: 1 1 0%;
+    justify-content: flex-end;
   }
 
   .nav-title {
@@ -2563,6 +2558,49 @@ a {
   border-bottom: 3px solid var(--color-sogang) !important;
   color: var(--color-sogang) !important;
   font-weight: 700 !important;
+}
+
+/* ==================== 메인 영역 검색 바 스타일 ==================== */
+.search-bar-row {
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.search-bar-row .search-box {
+  width: 100%;
+  position: relative;
+}
+
+.search-bar-row .search-box i {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.search-bar-row .search-box input {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  padding: 0.65rem 1rem 0.65rem 2.4rem;
+  border-radius: var(--radius-md);
+  width: 100%;
+  color: var(--color-text-main);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.search-bar-row .search-box input::placeholder {
+  color: var(--color-text-dim);
+}
+
+.search-bar-row .search-box input:focus {
+  outline: none;
+  border-color: var(--color-sogang);
+  box-shadow: 0 0 0 3px rgba(182, 0, 5, 0.12);
 }
 
 
