@@ -282,9 +282,16 @@ a {
 .navbar-left {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  flex: 1;
-  max-width: 600px;
+  flex: 1 1 0%;
+  justify-content: flex-start;
+}
+
+.navbar-center {
+  flex: 0 0 480px;
+  margin: 0 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .nav-brand {
@@ -305,6 +312,7 @@ a {
   font-weight: 800;
   letter-spacing: -0.5px;
   color: #ffffff;
+  white-space: nowrap;
 }
 
 .search-box {
@@ -348,6 +356,8 @@ a {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  flex: 1 1 0%;
+  justify-content: flex-end;
 }
 
 .user-profile-badge {
@@ -1537,7 +1547,18 @@ a {
   }
 
   .navbar-left {
+    flex: 0 0 auto;
     gap: 0.5rem;
+  }
+
+  .navbar-center {
+    flex: 1;
+    margin: 0 0.5rem;
+    max-width: none;
+  }
+
+  .navbar-right {
+    flex: 0 0 auto;
   }
 
   .nav-title {
