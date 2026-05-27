@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="서강대학교 가상융합전문대학원(GSVC) 구성원들의 연락처, 주요 관심사, 프로젝트 포트폴리오를 모아둔 전문 링크드인 스타일 멤버 디렉토리입니다.">
+  <title>Sogang GSVC Connect | 가상융합전문대학원 멤버 디렉토리</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- CSS Style -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- SheetJS Excel Library -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Cropper.js Library for image cropping -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+</head>
+<body>
+
+  <!-- ==================== 로그인 게이트웨이 ==================== -->
+  <main id="loginGate" class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="brand-logo">
+          <!-- 서강대 알바트로스 심플 로고 SVG -->
+          <svg viewBox="0 0 100 100" class="logo-svg" aria-hidden="true">
+            <polygon points="50,10 90,35 90,75 50,90 10,75 10,35" fill="none" stroke="var(--color-sogang)" stroke-width="3"/>
+            <path d="M50,25 C45,35 28,40 18,50 C33,48 45,55 50,68 C55,55 67,48 82,50 C72,40 55,35 50,25 Z" fill="var(--color-sogang)"/>
+          </svg>
+        </div>
+        <h1 class="brand-title">Sogang GSVC Connect</h1>
+        <p class="brand-subtitle">서강대 가상융합전문대학원 디렉토리</p>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label for="studentId">학번</label>
+          <input type="text" id="studentId" required autocomplete="username" placeholder="예: v2026101 또는 admin">
+        </div>
+        <div class="form-group">
+          <label for="phoneLast4">휴대폰 번호 뒷자리 (비밀번호)</label>
+          <input type="password" id="phoneLast4" required inputmode="numeric" placeholder="4자리 숫자 입력 (관리자는 0000)">
+        </div>
+        <div id="loginError" class="alert alert-danger hidden" role="alert">
+          <i class="fa-solid fa-circle-exclamation"></i> 학번 또는 비밀번호가 일치하지 않습니다.
+        </div>
+        <button type="submit" class="btn btn-sogang btn-full">로그인</button>
+      </form>
+
+      <div class="divider">
+        <span>또는</span>
+      </div>
+
+      <button id="guestLoginBtn" class="btn btn-light btn-full"><i class="fa-solid fa-eye"></i> 게스트로 접속하기</button>
+
+      <div class="login-footer">
+        <p>© 2026 서강대학교 가상융합전문대학원 (GSVC)</p>
+        <p class="hint">테스트 데이터: 학번 v2026101~v2026112 / 휴대폰 뒷자리 1001~1012<br>관리자 계정: 학번 admin / 휴대폰 뒷자리 0000</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== 메인 대시보드 ==================== -->
+  <div id="mainDashboard" class="dashboard-container hidden">
+    <!-- 상단 네비게이션바 -->
+    <header class="navbar">
+      <div class="navbar-left">
+        <div class="nav-brand">
+          <svg viewBox="0 0 100 100" class="nav-logo" aria-hidden="true">
+            <path d="M50,15 L85,40 L85,75 L50,90 L15,75 L15,40 Z" fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M50,28 C46,36 30,40 22,48 C34,46 46,52 50,62 C54,52 66,46 78,48 C70,40 54,36 50,28 Z" fill="currentColor"/>
+          </svg>
+          <h2 class="nav-title">Sogang GSVC Connect</h2>
+        </div>
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="searchInput" placeholder="이름, 관심 분야, 태그, 소개글 키워드 검색...">
+        </div>
+      </div>
+      
+      <div class="navbar-right">
+        <button id="navAdminTabBtn" class="nav-tab-btn hidden" title="운영 관리 대시보드"><i class="fa-solid fa-gear"></i> 운영 관리</button>
+        
+        <!-- 새 댓글 알림 컨테이너 -->
+        <div class="notification-container hidden" id="notifContainer">
+          <button id="notifBellBtn" class="btn-notif-bell" title="새 댓글 알림">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notif-badge hidden" id="notifBadge">0</span>
+          </button>
+          <div class="notif-popover hidden" id="notifPopover">
+            <div class="notif-popover-header">
+              <span>댓글 알림</span>
+              <button type="button" id="btnMarkAllRead" class="btn-mark-all-read">모두 읽음</button>
+            </div>
+            <div class="notif-list" id="notifList">
+              <!-- 알림 리스트 동적 삽입 -->
+            </div>
+          </div>
+        </div>
+
+        <div class="user-profile-badge">
+          <span class="user-avatar" id="navUserAvatar">G</span>
+          <span class="user-name" id="navUserName">게스트</span>
+        </div>
+        <button id="logoutBtn" class="btn-logout" title="로그아웃"><i class="fa-solid fa-arrow-right-from-bracket"></i> 로그아웃</button>
+      </div>
+    </header>
+
+    <!-- ==================== 디렉토리 뷰 ==================== -->
+    <div id="directoryView">
+      <div class="directory-layout">
+      
+        <!-- 좌측 사이드바 -->
+        <aside class="sidebar">
+          <!-- 현재 사용자 프로필 간략 카드 -->
+          <div class="sidebar-card user-mini-card">
+            <div class="mini-card-banner"></div>
+            <div class="mini-card-content">
+              <div class="mini-avatar" id="sidebarAvatar">G</div>
+              <h3 id="sidebarName">방문자</h3>
+              <p id="sidebarClass">게스트 모드</p>
+              <p id="sidebarHeadline" class="sidebar-headline">프로필을 등록하고 편집하려면 학번으로 로그인해 주세요.</p>
+              <button id="openAddMemberModalBtn" class="btn btn-sogang btn-full btn-sm hidden" style="border-radius: 6px; font-weight: 700; margin-top: 0.8rem;">
+                <i class="fa-solid fa-user-plus"></i> 새 멤버 추가
+              </button>
+              <button id="sidebarEditProfileBtn" class="btn btn-light btn-full btn-sm hidden" style="border-radius: 6px; font-weight: 700; margin-top: 0.5rem;">
+                <i class="fa-solid fa-pen-to-square"></i> 내 프로필 수정
+              </button>
+            </div>
+          </div>
+
+          <!-- 기수 필터 패널 -->
+          <div class="sidebar-card generation-filter-panel">
+            <h4><i class="fa-solid fa-graduation-cap"></i> 기수 분류 필터</h4>
+            <div class="form-group" style="margin-bottom: 0;">
+              <select id="generationFilter" class="select-generation" title="기수 필터 선택" style="width: 100%; cursor: pointer;">
+                <option value="">전체 기수</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 해시태그 필터링 패널 -->
+          <div class="sidebar-card tag-filter-panel">
+            <h4><i class="fa-solid fa-tags"></i> 인기 관심 키워드</h4>
+            <!-- 키워드 자체를 검색해서 필터링할 수 있는 소형 검색창 -->
+            <div class="sidebar-search-box" style="margin-bottom: 0.75rem; position: relative;">
+              <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: var(--color-text-dim);"></i>
+              <input type="text" id="tagSearchInput" placeholder="키워드 검색..." style="width: 100%; padding: 0.4rem 0.5rem 0.4rem 1.8rem; border-radius: 6px; font-size: 0.78rem; border: 1px solid var(--color-border); font-family: var(--font-body);">
+            </div>
+            <div class="filter-tags-list" id="filterTagsList" style="max-height: 200px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 0.3rem; padding-right: 0.2rem;">
+            </div>
+            <button id="clearFilterBtn" class="btn-clear-filter hidden" style="margin-top: 0.5rem;"><i class="fa-solid fa-rotate-left"></i> 필터 초기화</button>
+          </div>
+        </aside>
+
+        <!-- 우측 메인 콘텐츠 영역 -->
+        <main class="main-content">
+          <div class="content-header-toolbar">
+            <div class="toolbar-left">
+              <h3 id="memberCountText">전체 멤버 (12명)</h3>
+              <p class="content-sub-text">서강대 GSVC 멤버 리스트 (이름/분야/키워드 검색)</p>
+            </div>
+            <div class="view-toggle-container">
+              <button id="viewToggleGrid" class="btn-view-toggle active" title="카드 그리드형으로 보기"><i class="fa-solid fa-grip"></i> 카드형</button>
+              <button id="viewToggleList" class="btn-view-toggle" title="세로 목록 리스트형으로 보기"><i class="fa-solid fa-list"></i> 리스트형</button>
+            </div>
+          </div>
+          <div class="members-grid grid-view" id="membersGrid">
+          </div>
+        </main>
+
+      </div>
+    </div>
+
+    <!-- ==================== 운영 관리 대시보드 ==================== -->
+    <div id="adminDashboardView" class="hidden">
+      <div class="admin-dashboard">
+        <!-- 헤더 -->
+        <div class="admin-dashboard-header">
+          <div>
+            <h2><i class="fa-solid fa-shield-halved"></i> 운영 관리 대시보드</h2>
+            <p class="admin-dashboard-subtitle">서강대 가상융합전문대학원(GSVC) 디렉토리 멤버 및 권한 관리</p>
+          </div>
+          <button id="backToDirectoryBtn" class="btn btn-light btn-sm"><i class="fa-solid fa-arrow-left"></i> 디렉토리로 돌아가기</button>
+        </div>
+
+        <!-- 통계 카드 -->
+        <div class="admin-stats-row">
+          <div class="admin-stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #B60005, #8a0003);"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="statTotalMembers">0</span>
+              <span class="stat-label">전체 멤버</span>
+            </div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #C5A059, #a8853d);"><i class="fa-solid fa-user-shield"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="statAdminCount">0</span>
+              <span class="stat-label">관리자 수</span>
+            </div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #4361ee, #3a56d4);"><i class="fa-solid fa-layer-group"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="statGenCount">0</span>
+              <span class="stat-label">등록 기수</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 멤버 관리 테이블 -->
+        <div class="admin-table-section">
+          <div class="admin-table-header">
+            <h3><i class="fa-solid fa-table-list"></i> 멤버 관리</h3>
+            <div class="admin-table-actions">
+              <div class="admin-search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="adminSearchInput" placeholder="이름 또는 학번 검색...">
+              </div>
+              <!-- 필터 드롭다운들 -->
+              <select id="adminGenFilter" class="select-generation admin-filter-select" title="기수 필터" style="padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--color-border); cursor: pointer;">
+                <option value="">모든 기수</option>
+              </select>
+              <select id="adminRoleFilter" class="admin-filter-select" title="권한 필터" style="padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--color-border); cursor: pointer;">
+                <option value="">모든 권한</option>
+                <option value="super_admin">최고관리자</option>
+                <option value="admin">관리자</option>
+                <option value="member">원우</option>
+              </select>
+              <button id="adminExcelUploadBtn" class="btn btn-light btn-sm" style="font-weight: 700;"><i class="fa-solid fa-file-excel" style="color: #107c41; margin-right: 0.2rem;"></i> 엑셀 일괄 등록</button>
+              <button id="adminAddMemberBtn" class="btn btn-sogang btn-sm"><i class="fa-solid fa-user-plus"></i> 새 멤버 추가</button>
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-member-table" id="adminMemberTable">
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>학번</th>
+                  <th>기수</th>
+                  <th>전공</th>
+                  <th>학위</th>
+                  <th>권한</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="adminMemberTableBody">
+                <!-- JS 동적 렌더링 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== 상세 보기 및 편집 모달 ==================== -->
+  <div id="profileModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <button id="closeModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      
+      
+      <!-- 모달 콘텐츠 본문 -->
+      <div class="modal-content">
+        <!-- 기본 모드 (조회) -->
+        <div id="modalViewMode" class="modal-view-mode">
+          <div class="modal-header-info">
+            <div class="modal-avatar" id="modalAvatar">K</div>
+            <div class="modal-identity">
+              <div class="name-edit-row">
+                <h2 id="modalName">김서강</h2>
+                <button id="editProfileBtn" class="btn-edit-profile hidden" title="프로필 수정"><i class="fa-solid fa-pen"></i> 프로필 수정</button>
+              </div>
+              <p id="modalClass" class="modal-class">26학번 / 메타버스 전공</p>
+              <p id="modalHeadline" class="modal-headline">한 줄 관심사 헤드라인</p>
+              <div class="modal-email-row" id="modalEmailRow" style="margin-bottom: 0.5rem; font-size: 0.82rem; display: none; align-items: center; gap: 0.5rem;">
+                <!-- 이메일 정보 동적 바인딩 -->
+              </div>
+              <div class="modal-contact-row" id="modalContactRow">
+                <!-- 연락처 아이콘 동적 바인딩 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-body-sections">
+            <div class="modal-section">
+              <h4>소개 & 기본 정보</h4>
+              <p id="modalBio" class="section-text">자기소개 내용이 들어갑니다.</p>
+            </div>
+
+            <div class="modal-section hidden" id="modalEducationSection">
+              <h4><i class="fa-solid fa-graduation-cap text-gold"></i> 이전 학력 및 전공</h4>
+              <p id="modalEducation" class="section-text" style="white-space: pre-wrap;"></p>
+            </div>
+
+            <div class="modal-section hidden" id="modalExperienceSection">
+              <h4><i class="fa-solid fa-briefcase text-gold"></i> 주요 실무 경력</h4>
+              <p id="modalExperience" class="section-text" style="white-space: pre-wrap;"></p>
+            </div>
+            
+            <div class="modal-section">
+              <h4>대표 프로젝트 및 성과</h4>
+              <p id="modalProjects" class="section-text project-list">프로젝트 목록이 들어갑니다.</p>
+            </div>
+
+            <!-- 자유 기재 영역 (customContent) -->
+            <div class="modal-section" id="modalCustomContentSection">
+              <h4>보여주고 싶은 내용 / 자유 포트폴리오</h4>
+              <p id="modalCustomContent" class="section-text" style="font-size: 0.82rem;"></p>
+            </div>
+
+            <div class="modal-section">
+              <h4>관심 기술 태그</h4>
+              <div class="modal-tags" id="modalTagsContainer">
+                <!-- 태그 리스트 -->
+              </div>
+            </div>
+
+            <!-- 모달 내부: 개인 방명록 피드 (글로벌 탭에서 모달 아래로 강제 바인딩) -->
+            <div class="modal-section personal-guestbook-section" style="border-top: 1px solid #f3f2ef; padding-top: 1.5rem; margin-top: 1rem;">
+              <h4 style="display: flex; align-items: center; justify-content: space-between;">
+                <span><i class="fa-solid fa-envelope-open-text text-gold"></i> 멤버 방명록 & 추천서</span>
+                <span class="comment-count" id="modalCommentCount" style="font-size: 0.72rem; font-weight: 500; background-color:#f3f2ef; padding:0.15rem 0.5rem; border-radius:10px;">로그 0개</span>
+              </h4>
+              
+              <!-- 방명록 등록 상자 -->
+              <div class="modal-guestbook-form-box" id="modalGuestbookFormBox" style="background-color: #f9f9f9; padding: 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin: 0.75rem 0 1rem;">
+                <form id="modalCommentForm" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <div class="form-row" style="display: grid; grid-template-columns: 1fr 100px 120px; gap: 0.5rem; align-items: center;">
+                    <input type="text" id="modalCommentAuthor" placeholder="작성자 이름" required maxlength="15" style="font-size: 0.78rem; padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid var(--color-border);">
+                    <select id="modalCommentTag" title="종류" style="font-size: 0.78rem; padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid var(--color-border); cursor: pointer;">
+                      <option value="cheer">🔥 응원</option>
+                      <option value="question">❓ 질문</option>
+                      <option value="coffee">☕ 커피조공</option>
+                      <option value="feedback">🎯 피드백</option>
+                    </select>
+                    <label style="font-size: 0.75rem; color: var(--color-text-sub); display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; user-select: none;">
+                      <input type="checkbox" id="modalCommentPrivate" style="cursor: pointer;"> <i class="fa-solid fa-lock" style="font-size:0.7rem;"></i> 비공개 설정
+                    </label>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                    <textarea id="modalCommentMessage" rows="2" placeholder="이 멤버에게 전할 말을 자유롭게 적어보세요 (최대 100자). 비공개 체크 시 본인과 카드 주인만 열람할 수 있습니다." required maxlength="100" style="flex: 1; font-family: var(--font-body); font-size: 0.8rem; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid var(--color-border); resize: none;"></textarea>
+                    <button type="submit" class="btn btn-sogang btn-sm" style="border-radius: 4px; padding: 0.4rem 1.2rem; height: 38px;"><i class="fa-solid fa-paper-plane"></i> 전송</button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- 개인 방명록 렌더링 리스트 -->
+              <div class="modal-comments-list" id="modalCommentsList" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 250px; overflow-y: auto; padding-right: 0.3rem;">
+                <!-- 동적으로 개인 방명록 카드가 렌더링 됨 -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 편집 모드 (양식) -->
+        <div id="modalEditMode" class="modal-edit-mode hidden">
+          <h2>프로필 디렉토리 정보 편집</h2>
+          <p class="edit-hint">본인 학번에 등록된 이름, 전공, 기수 및 자유 양식을 갱신합니다.</p>
+          
+          <form id="profileEditForm" class="edit-form">
+            <!-- 관리자만 설정 가능한 기본 인적 정보 필드 -->
+            <div id="editAdminOnlyFields" class="hidden" style="background-color: #f7fafc; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 0.75rem;">
+              <h4 style="font-size: 0.8rem; color: var(--color-sogang); margin-bottom: 0.5rem; font-weight: 700;"><i class="fa-solid fa-lock"></i> 기본 학적 정보 (관리자 전용)</h4>
+              <div class="form-row split" style="grid-template-columns: 1.2fr 1fr 0.8fr; display: grid; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div class="form-group">
+                  <label for="editName">이름</label>
+                  <input type="text" id="editName" placeholder="예: 김서강">
+                </div>
+                <div class="form-group">
+                  <label for="editClassYear">소속 전공 학과</label>
+                  <input type="text" id="editClassYear" placeholder="예: 메타버스 전공">
+                </div>
+                <div class="form-group">
+                  <label for="editGeneration">기수 (숫자)</label>
+                  <input type="number" id="editGeneration" placeholder="예: 9" min="1" max="100">
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0;">
+                <div class="form-group">
+                  <label for="editDegreeProcess">학위 과정</label>
+                  <input type="text" id="editDegreeProcess" placeholder="예: 석사 과정">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="editHeadline">한 줄 헤드라인 (대표 관심사)</label>
+                <input type="text" id="editHeadline" maxlength="60" placeholder="예: 유니티 엔진 기반 VR 콘텐츠 개발에 관심이 깊은 프로그래머">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="editEmail">이메일 주소 (필수/고정)</label>
+              <input type="email" id="editEmail" required placeholder="예: seokang@sogang.ac.kr">
+            </div>
+            <div class="form-group">
+              <label style="font-weight: 700; color: var(--color-text-sub); display: flex; align-items: center; gap: 0.3rem;">
+                <i class="fa-solid fa-share-nodes"></i> 연락처 및 소셜 링크 (최대 5개)
+              </label>
+              <div id="editSnsLinksContainer" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem; margin-top: 0.25rem;">
+                <!-- JS 동적 생성 -->
+              </div>
+              <button type="button" id="btnAddEditSnsLink" class="btn btn-light btn-sm" style="font-weight: 700; border-radius: 6px;"><i class="fa-solid fa-plus"></i> 링크 추가</button>
+            </div>
+
+            <div class="form-group">
+              <label for="editTags">관심 키워드 태그 (쉼표로 구분)</label>
+              <input type="text" id="editTags" placeholder="예: Unity, C#, Shader, 3D아트">
+            </div>
+
+            <div class="form-group">
+              <label for="editBio">간단한 소개글</label>
+              <textarea id="editBio" rows="3" placeholder="자신의 강점이나 협업 성향을 짧게 기재해주세요."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="editProjects">대표 프로젝트 및 활동 성과</label>
+              <textarea id="editProjects" rows="3" placeholder="• 프로젝트 명 (연도) - 기여 및 개발 내용"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="editEducation">이전 학력 및 전공</label>
+              <textarea id="editEducation" rows="2" placeholder="예: 서강대학교 컴퓨터공학 학사 (재학/졸업)"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="editExperience">주요 실무 경력</label>
+              <textarea id="editExperience" rows="2" placeholder="예: OO테크 가상현실 개발팀 대리 (3년 근무)"></textarea>
+            </div>
+
+            <!-- 자유 작성 란 추가 (customContent) -->
+            <div class="form-group">
+              <label for="editCustomContent">보여주고 싶은 내용 (자유 양식 - 포트폴리오, 관심 기술, 연구 제안 등 제한 없음)</label>
+              <textarea id="editCustomContent" rows="6" placeholder="이곳에 대학원에서 동기들과 교류/협업하기 위한 상세 정보를 자유롭게 적어보세요. (예: &#10;1. 학부 전공 & 실무 경험&#10;2. 대학원 연구 분야 및 주요 주제&#10;3. 협업 가능한 기술 스택/디자인 툴&#10;4. 찾는 파트너 유형: 기획/개발/아트 등&#10;5. 소속 연구실 또는 직장 근무 여부)"></textarea>
+            </div>
+
+            <!-- 프로필 사진 업로드 필드 추가 -->
+            <div class="form-group">
+              <label for="editAvatarFile">프로필 사진 업로드 (권장: 1:1 비율, 150KB 이하)</label>
+              <input type="file" id="editAvatarFile" accept="image/*" style="font-size: 0.8rem; padding: 0.4rem;">
+              <div id="editAvatarPreview" style="margin-top: 0.5rem; display: none; align-items: center; gap: 0.5rem;">
+                <img id="editAvatarPreviewImg" src="" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--color-border);">
+                <span style="font-size: 0.78rem; color: #107c41; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> 자르기 적용 완료</span>
+              </div>
+            </div>
+
+            <div class="edit-form-actions">
+              <button type="button" id="cancelEditBtn" class="btn btn-light">취소</button>
+              <button type="submit" class="btn btn-sogang">변경 저장</button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 관리자용 멤버 추가 모달 ==================== -->
+  <div id="memberAddModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 550px;">
+      <button id="closeAddModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 2rem;">
+        <h2 style="margin-bottom: 0.2rem; font-size: 1.25rem; font-weight: 700;"><i class="fa-solid fa-user-plus text-gold"></i> 신규 멤버 추가</h2>
+        <p class="edit-hint" style="margin-bottom: 1.2rem;">새로운 서강대 가상융합전문대학원 구성원을 디렉토리에 등록합니다.</p>
+        
+        <form id="memberAddForm" class="edit-form">
+          <div class="form-row split" style="grid-template-columns: 1.2fr 1fr 0.8fr; display: grid; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div class="form-group">
+              <label for="addStudentId">학번 (로그인 ID)</label>
+              <input type="text" id="addStudentId" required placeholder="예: v2026105">
+            </div>
+            <div class="form-group">
+              <label for="addPhoneLast4">휴대폰 뒷자리</label>
+              <input type="password" id="addPhoneLast4" required placeholder="4자리 숫자" pattern="[0-9]{4}">
+            </div>
+            <div class="form-group">
+              <label for="addGeneration">기수 (숫자)</label>
+              <input type="number" id="addGeneration" placeholder="예: 9" min="1" max="100">
+            </div>
+          </div>
+
+          <div class="form-row split" style="grid-template-columns: 1.2fr 1fr; display: grid; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div class="form-group">
+              <label for="addName">이름</label>
+              <input type="text" id="addName" placeholder="예: 홍길동">
+            </div>
+            <div class="form-group">
+              <label for="addDegreeProcess">학위 과정</label>
+              <input type="text" id="addDegreeProcess" placeholder="예: 석사 과정">
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 0.5rem;">
+            <div class="form-group">
+              <label for="addClassYear">전공 분야</label>
+              <input type="text" id="addClassYear" placeholder="예: 메타버스 전공">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight: 700; color: var(--color-text-sub); display: flex; align-items: center; gap: 0.3rem;">
+              <i class="fa-solid fa-share-nodes"></i> 연락처 및 소셜 링크 (최대 5개)
+            </label>
+            <div id="addSnsLinksContainer" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem; margin-top: 0.25rem;">
+              <!-- JS 동적 생성 -->
+            </div>
+            <button type="button" id="btnAddAddSnsLink" class="btn btn-light btn-sm" style="font-weight: 700; border-radius: 6px;"><i class="fa-solid fa-plus"></i> 링크 추가</button>
+          </div>
+
+          <div class="form-group">
+            <label for="addTags">관심 키워드 태그 (쉼표로 구분)</label>
+            <input type="text" id="addTags" placeholder="예: Unity, C#, VR">
+          </div>
+
+          <div class="form-group">
+            <label for="addBio">상세 소개글</label>
+            <textarea id="addBio" rows="3" placeholder="자신의 관심 분야나 성향을 적어주세요."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="addEducation">이전 학력 및 전공</label>
+            <textarea id="addEducation" rows="2" placeholder="예: 서강대학교 컴퓨터공학 학사 (재학/졸업)"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="addExperience">주요 실무 경력</label>
+            <textarea id="addExperience" rows="2" placeholder="예: OO테크 가상현실 개발팀 대리 (3년 근무)"></textarea>
+          </div>
+
+          <!-- 신규 등록용 프로필 사진 업로드 필드 추가 -->
+          <div class="form-group">
+            <label for="addAvatarFile">프로필 사진 업로드</label>
+            <input type="file" id="addAvatarFile" accept="image/*" style="font-size: 0.8rem; padding: 0.4rem;">
+            <div id="addAvatarPreview" style="margin-top: 0.5rem; display: none; align-items: center; gap: 0.5rem;">
+              <img id="addAvatarPreviewImg" src="" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--color-border);">
+              <span style="font-size: 0.78rem; color: #107c41; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> 자르기 적용 완료</span>
+            </div>
+          </div>
+
+          <div class="edit-form-actions">
+            <button type="button" id="cancelAddBtn" class="btn btn-light">취소</button>
+            <button type="submit" class="btn btn-sogang">등록 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 관리자용 엑셀 일괄 등록 모달 ==================== -->
+  <div id="excelUploadModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto;">
+      <button id="closeExcelModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 2rem;">
+        <h2 style="margin-bottom: 0.2rem; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-file-excel" style="color: #107c41;"></i> 엑셀 일괄 멤버 등록
+        </h2>
+        <p class="edit-hint" style="margin-bottom: 1.2rem;">엑셀 파일(.xlsx, .xls)을 업로드하여 여러 명의 구성원을 한 번에 등록합니다.</p>
+        
+        <!-- 상단 가이드 및 템플릿 다운로드 -->
+        <div style="background-color: #f7fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--color-border); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="font-size: 0.82rem; color: var(--color-text-sub); line-height: 1.45; max-width: 70%;">
+            <strong style="color: var(--color-text-main);">💡 작성 팁:</strong><br>
+            1. 우측 버튼을 눌러 공식 엑셀 템플릿 양식을 다운로드합니다.<br>
+            2. 양식에 맞게 원우 정보를 입력한 후 업로드해 주세요.<br>
+            3. 학번이 중복될 경우 아래 미리보기 화면에서 충돌 제어가 가능합니다.
+          </div>
+          <button id="downloadExcelTemplateBtn" class="btn btn-light" type="button" style="font-weight: 700; border-color: #107c41; color: #107c41;"><i class="fa-solid fa-download"></i> 템플릿 다운로드</button>
+        </div>
+
+        <!-- 엑셀 드롭존 -->
+        <div id="excelDropzone" class="excel-dropzone" style="border: 2px dashed var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: var(--transition); background-color: #faf9f6; margin-bottom: 1.5rem;">
+          <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.5rem; color: var(--color-text-dim); margin-bottom: 0.8rem;"></i>
+          <p style="font-size: 0.9rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 0.3rem;">여기에 엑셀 파일을 드래그하여 놓거나 클릭하여 선택하세요.</p>
+          <p style="font-size: 0.75rem; color: var(--color-text-dim);">지원 파일 형식: .xlsx, .xls</p>
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+        </div>
+
+        <!-- 파싱 결과 미리보기 영역 -->
+        <div id="excelPreviewSection" class="hidden">
+          <!-- 충돌 상태 가이드 바 -->
+          <div style="background-color: #fff9e6; border: 1px solid #ffeeba; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem;">
+            <span id="excelConflictStatusText" style="font-weight: 700; color: #856404;">
+              <i class="fa-solid fa-circle-exclamation"></i> 중복 데이터 진단 중...
+            </span>
+            <div id="excelConflictControls" class="hidden" style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-weight: 600; color: var(--color-text-sub);">중복 일괄 설정:</span>
+              <button type="button" id="btnApplyAllSkip" class="btn btn-light btn-xs" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; border-radius: 4px;">전체 건너뛰기</button>
+              <button type="button" id="btnApplyAllOverwrite" class="btn btn-light btn-xs" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; border-radius: 4px; border-color: var(--color-sogang); color: var(--color-sogang);">전체 덮어쓰기</button>
+            </div>
+          </div>
+
+          <!-- 미리보기 리스트 테이블 -->
+          <h4 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-text-main);"><i class="fa-solid fa-magnifying-glass-chart"></i> 업로드 데이터 미리보기</h4>
+          <div class="admin-table-wrap" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 6px; margin-bottom: 1.5rem;">
+            <table class="admin-member-table" style="font-size: 0.8rem; width: 100%;">
+              <thead>
+                <tr>
+                  <th>학번</th>
+                  <th>이름</th>
+                  <th>기수</th>
+                  <th>전공</th>
+                  <th>과정</th>
+                  <th>비밀번호 (뒷자리)</th>
+                  <th>상태 / 충돌 해결</th>
+                </tr>
+              </thead>
+              <tbody id="excelPreviewTableBody">
+                <!-- 동적 파싱 행들 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="edit-form-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--color-border); padding-top: 1rem;">
+          <button type="button" id="cancelExcelBtn" class="btn btn-light">취소</button>
+          <button type="button" id="btnSubmitExcel" class="btn btn-sogang" disabled>일괄 등록하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 이미지 크롭 모달 ==================== -->
+  <div id="imageCropModal" class="modal-overlay hidden" role="dialog" aria-modal="true" style="z-index: 2000;">
+    <div class="modal-card" style="max-width: 450px; width: 95%;">
+      <button id="closeCropModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 1.5rem;">
+        <h2 style="margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-crop-simple" style="color: var(--color-sogang);"></i> 프로필 사진 자르기
+        </h2>
+        <p class="edit-hint" style="margin-bottom: 1rem;">원하는 영역을 드래그하여 지정한 뒤 [적용]을 누르세요.</p>
+        
+        <div class="crop-container" style="max-height: 300px; background-color: #000; display: flex; justify-content: center; align-items: center; overflow: hidden; border-radius: 8px; margin-bottom: 1.5rem;">
+          <img id="cropImageTarget" src="" alt="크롭 대상 이미지" style="max-width: 100%; max-height: 300px; display: block;">
+        </div>
+
+        <div class="edit-form-actions" style="margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+          <button type="button" id="btnCancelCrop" class="btn btn-light">취소</button>
+          <button type="button" id="btnConfirmCrop" class="btn btn-sogang">자르기 및 적용</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
