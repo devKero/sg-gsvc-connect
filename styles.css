@@ -2502,6 +2502,69 @@ a {
   font-size: 1.5rem;
 }
 
+/* ==================== 문의사항 및 비밀번호 변경 스타일 ==================== */
+.inquiry-tabs button {
+  transition: all 0.2s ease;
+}
+.inquiry-tabs button:hover {
+  color: var(--color-sogang) !important;
+}
+
+.my-inquiry-card {
+  background-color: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.8rem;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.my-inquiry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.2rem;
+}
+
+.inquiry-status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+}
+.inquiry-status-badge.pending {
+  background-color: #feebc8;
+  color: #c05621;
+}
+.inquiry-status-badge.resolved {
+  background-color: #c6f6d5;
+  color: #22543d;
+}
+
+.inquiry-reply-box {
+  background-color: #ebf8ff;
+  border-left: 3px solid #3182ce;
+  padding: 0.5rem;
+  border-radius: 0 4px 4px 0;
+  margin-top: 0.3rem;
+}
+
+.admin-tab-menu button {
+  transition: all 0.2s ease;
+}
+.admin-tab-menu button:hover {
+  color: var(--color-sogang) !important;
+}
+.admin-tab-menu button.active-tab {
+  border-bottom: 3px solid var(--color-sogang) !important;
+  color: var(--color-sogang) !important;
+  font-weight: 700 !important;
+}
+
 
 
 

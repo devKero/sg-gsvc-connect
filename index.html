@@ -92,6 +92,7 @@
       </div>
       
       <div class="navbar-right">
+        <button id="navInquiryBtn" class="nav-tab-btn" title="운영진 문의 및 건의사항"><i class="fa-solid fa-envelope-open-text"></i> 운영진 문의</button>
         <button id="navAdminTabBtn" class="nav-tab-btn hidden" title="운영 관리 대시보드"><i class="fa-solid fa-gear"></i> 운영 관리</button>
         
         <!-- 새 댓글 알림 컨테이너 -->
@@ -137,7 +138,10 @@
                 <i class="fa-solid fa-user-plus"></i> 새 멤버 추가
               </button>
               <button id="sidebarEditProfileBtn" class="btn btn-light btn-full btn-sm hidden" style="border-radius: 6px; font-weight: 700; margin-top: 0.5rem;">
-                <i class="fa-solid fa-pen-to-square"></i> 내 프로필 수정
+                <i class="fa-regular fa-address-card"></i> 내 프로필 조회
+              </button>
+              <button id="sidebarChangePwBtn" class="btn btn-light btn-full btn-sm hidden" style="border-radius: 6px; font-weight: 700; margin-top: 0.5rem;">
+                <i class="fa-solid fa-key"></i> 비밀번호 변경
               </button>
             </div>
           </div>
@@ -222,8 +226,14 @@
           </div>
         </div>
 
+        <!-- 관리자 탭 메뉴 -->
+        <div class="admin-tab-menu" style="display: flex; gap: 1rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1.5rem; padding-bottom: 0.15rem;">
+          <button id="adminTabMembers" class="btn btn-sm" style="background: none; border: none; border-bottom: 3px solid var(--color-sogang); border-radius: 0; padding: 0.5rem 1rem; font-weight: 700; color: var(--color-sogang); cursor: pointer;">회원 관리</button>
+          <button id="adminTabInquiries" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">건의 및 문의사항 (<span id="adminInquiryCount">0</span>)</button>
+        </div>
+
         <!-- 멤버 관리 테이블 -->
-        <div class="admin-table-section">
+        <div class="admin-table-section" id="adminMembersSection">
           <div class="admin-table-header">
             <h3><i class="fa-solid fa-table-list"></i> 멤버 관리</h3>
             <div class="admin-table-actions">
@@ -259,6 +269,31 @@
                 </tr>
               </thead>
               <tbody id="adminMemberTableBody">
+                <!-- JS 동적 렌더링 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 문의 및 건의사항 섹션 -->
+        <div id="adminInquirySection" class="admin-table-section hidden">
+          <div class="admin-table-header">
+            <h3><i class="fa-solid fa-envelope-open-text"></i> 건의 및 문의사항</h3>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-member-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 100px;">작성자</th>
+                  <th style="width: 110px;">학번</th>
+                  <th style="width: 180px;">제목</th>
+                  <th>내용</th>
+                  <th style="width: 150px;">작성일</th>
+                  <th style="width: 100px;">상태</th>
+                  <th style="width: 320px;">답변 및 관리</th>
+                </tr>
+              </thead>
+              <tbody id="adminInquiryTableBody">
                 <!-- JS 동적 렌더링 -->
               </tbody>
             </table>
@@ -649,6 +684,86 @@
           <button type="button" id="btnCancelCrop" class="btn btn-light">취소</button>
           <button type="button" id="btnConfirmCrop" class="btn btn-sogang">자르기 및 적용</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 운영진 문의 및 건의 모달 ==================== -->
+  <div id="inquiryModal" class="modal-overlay hidden" role="dialog" aria-modal="true" style="z-index: 1050;">
+    <div class="modal-card" style="max-width: 550px; width: 95%;">
+      <button id="closeInquiryModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 1.5rem;">
+        <h2 style="margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-envelope-open-text" style="color: var(--color-sogang-gold);"></i> 운영진 문의 및 건의
+        </h2>
+        
+        <!-- 탭 구조 (문의 작성 / 내 문의 내역) -->
+        <div class="inquiry-tabs" style="display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: 1rem; margin-top: 1rem; gap: 1rem;">
+          <button id="tabInquiryWrite" class="tab-btn active" style="background: none; border: none; padding: 0.5rem 0.2rem; font-size: 0.85rem; font-weight: 700; border-bottom: 2px solid var(--color-sogang); cursor: pointer; color: var(--color-sogang);">문의 보내기</button>
+          <button id="tabInquiryList" class="tab-btn" style="background: none; border: none; padding: 0.5rem 0.2rem; font-size: 0.85rem; font-weight: 500; cursor: pointer; color: var(--color-text-sub);">내 문의 내역 (<span id="myInquiryCount">0</span>)</button>
+        </div>
+
+        <!-- 문의 작성 뷰 -->
+        <div id="inquiryWriteView">
+          <form id="inquiryForm" style="display: flex; flex-direction: column; gap: 0.8rem;">
+            <div class="form-group">
+              <label for="inquiryAuthor">작성자 이름</label>
+              <input type="text" id="inquiryAuthor" required placeholder="이름을 입력해 주세요">
+            </div>
+            <div class="form-group">
+              <label for="inquiryTitle">제목 (선택)</label>
+              <input type="text" id="inquiryTitle" placeholder="문의 사항의 제목을 적어주세요">
+            </div>
+            <div class="form-group">
+              <label for="inquiryMessage">내용</label>
+              <textarea id="inquiryMessage" rows="5" required placeholder="운영진 및 원우회에게 보낼 건의나 문의 사항을 자세히 적어보세요. (최대 500자)" maxlength="500" style="font-family: var(--font-body); font-size: 0.85rem; padding: 0.5rem; border-radius: 4px; border: 1px solid var(--color-border); resize: none;"></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+              <button type="button" id="btnCancelInquiry" class="btn btn-light">취소</button>
+              <button type="submit" class="btn btn-sogang">문의 전송</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 내 문의 내역 뷰 -->
+        <div id="inquiryListView" class="hidden">
+          <div id="myInquiriesContainer" style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; padding-right: 0.3rem;">
+            <!-- 내 건의 목록 동적 렌더링 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 비밀번호 변경 모달 ==================== -->
+  <div id="changePwModal" class="modal-overlay hidden" role="dialog" aria-modal="true" style="z-index: 1060;">
+    <div class="modal-card" style="max-width: 400px; width: 95%;">
+      <button id="closeChangePwModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 1.5rem;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-key" style="color: var(--color-sogang);"></i> 비밀번호 변경
+        </h2>
+        <form id="changePwForm" style="display: flex; flex-direction: column; gap: 0.8rem;">
+          <div class="form-group">
+            <label for="currentPw">현재 비밀번호</label>
+            <input type="password" id="currentPw" required placeholder="현재 비밀번호를 입력하세요">
+          </div>
+          <div class="form-group">
+            <label for="newPw">새 비밀번호</label>
+            <input type="password" id="newPw" required placeholder="새 비밀번호 입력">
+          </div>
+          <div class="form-group">
+            <label for="newPwConfirm">새 비밀번호 확인</label>
+            <input type="password" id="newPwConfirm" required placeholder="새 비밀번호를 한 번 더 입력하세요">
+          </div>
+          <div id="changePwError" class="alert alert-danger hidden" role="alert" style="margin-bottom: 0;">
+            <i class="fa-solid fa-circle-exclamation"></i> 입력 정보가 유효하지 않습니다.
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.8rem;">
+            <button type="button" id="btnCancelChangePw" class="btn btn-light">취소</button>
+            <button type="submit" class="btn btn-sogang">변경 적용</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

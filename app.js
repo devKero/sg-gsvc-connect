@@ -37,7 +37,9 @@ let state = {
   editCroppedBlob: null,    // 크롭된 에디트 아바타 블롭 임시 보관
   addCroppedBlob: null,      // 크롭된 추가 아바타 블롭 임시 보관
   notifications: [],        // 내 프로필에 달린 알림 목록
-  unreadNotifCount: 0       // 미확인 알림 수
+  unreadNotifCount: 0,      // 미확인 알림 수
+  inquiries: [],           // 문의/건의 데이터
+  adminActiveTab: 'members' // 어드민 하위 탭 ('members', 'inquiries')
 };
 
 const AVATAR_COLORS = [
@@ -321,6 +323,14 @@ function initLocalStorage() {
     localStorage.setItem('sogang_unity_guestbook', JSON.stringify(state.guestbook));
   }
 
+  // 문의사항 로드
+  const storedInquiries = localStorage.getItem('sogang_unity_inquiries');
+  if (storedInquiries) {
+    state.inquiries = JSON.parse(storedInquiries);
+  } else {
+    state.inquiries = [];
+  }
+
   // 전공 목록 로드 제거됨
 
   // 뷰모드 캐시 로드
@@ -354,14 +364,27 @@ async function syncWithSupabase() {
 
     if (gError) throw gError;
 
+    // 3. inquiries 테이블 데이터 조회 (방어막 장착)
+    let dbInquiries = [];
+    try {
+      const { data, error } = await supabaseClient
+        .from('inquiries')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      dbInquiries = data || [];
+    } catch (err) {
+      console.warn("inquiries 테이블 로드 실패 (아직 생성되지 않았거나 마이그레이션 전 단계일 수 있습니다):", err);
+    }
+
     // 3. majors 테이블 데이터 조회 제거됨
 
-    // 만약 클라우드에 멤버 데이터가 아예 없다면, 초기 멤버 12인을 클라우드에 벌크 인서트(시드 데이터 주입)
-    if (dbMembers.length === 0) {
-      console.log("Supabase에 초기 데이터가 없어 INITIAL_MEMBERS 시드 데이터를 주입합니다...");
+    // 만약 클라우드에 멤버 데이터가 아예 없거나 admin만 있다면, 초기 멤버 35인을 클라우드에 벌크 인서트(시드 데이터 주입)
+    if (dbMembers.length <= 1) {
+      console.log("Supabase에 초기 데이터가 없거나 admin만 존재하여 INITIAL_MEMBERS 시드 데이터를 주입합니다...");
       const { error: seedError } = await supabaseClient
         .from('members')
-        .insert(state.members.map(m => ({
+        .upsert(state.members.map(m => ({
           id: m.id,
           student_id: m.studentId,
           phone_last4: m.phoneLast4,
@@ -471,6 +494,19 @@ async function syncWithSupabase() {
         likes: g.likes || 0
       }));
       localStorage.setItem('sogang_unity_guestbook', JSON.stringify(state.guestbook));
+
+      // 문의사항 데이터 갱신
+      state.inquiries = dbInquiries.map(i => ({
+        id: i.id,
+        studentId: i.student_id,
+        author: i.author,
+        title: i.title || "",
+        message: i.message,
+        reply: i.reply || "",
+        status: i.status || "pending",
+        createdAt: i.created_at
+      }));
+      localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
 
       // 전공 목록 동기화 제거됨
     }
@@ -714,7 +750,6 @@ function setupEventListeners() {
     sidebarEditBtn.addEventListener('click', () => {
       if (state.currentUser && !state.currentUser.isGuest) {
         openProfileModal(state.currentUser.id);
-        enableEditMode();
       }
     });
   }
@@ -997,6 +1032,72 @@ function setupEventListeners() {
       }
     }
   });
+
+  // --- 운영진 문의 관련 리스너 ---
+  const navInquiryBtn = document.getElementById('navInquiryBtn');
+  if (navInquiryBtn) {
+    navInquiryBtn.addEventListener('click', openInquiryModal);
+  }
+  const closeInquiryModalBtn = document.getElementById('closeInquiryModalBtn');
+  if (closeInquiryModalBtn) {
+    closeInquiryModalBtn.addEventListener('click', closeInquiryModal);
+  }
+  const btnCancelInquiry = document.getElementById('btnCancelInquiry');
+  if (btnCancelInquiry) {
+    btnCancelInquiry.addEventListener('click', closeInquiryModal);
+  }
+  const inquiryModal = document.getElementById('inquiryModal');
+  if (inquiryModal) {
+    inquiryModal.addEventListener('click', (e) => {
+      if (e.target.id === 'inquiryModal') closeInquiryModal();
+    });
+  }
+  const tabInquiryWrite = document.getElementById('tabInquiryWrite');
+  if (tabInquiryWrite) {
+    tabInquiryWrite.addEventListener('click', () => switchInquiryTab('write'));
+  }
+  const tabInquiryList = document.getElementById('tabInquiryList');
+  if (tabInquiryList) {
+    tabInquiryList.addEventListener('click', () => switchInquiryTab('list'));
+  }
+  const inquiryForm = document.getElementById('inquiryForm');
+  if (inquiryForm) {
+    inquiryForm.addEventListener('submit', handleInquirySubmit);
+  }
+
+  // --- 비밀번호 변경 관련 리스너 ---
+  const sidebarChangePwBtn = document.getElementById('sidebarChangePwBtn');
+  if (sidebarChangePwBtn) {
+    sidebarChangePwBtn.addEventListener('click', openChangePwModal);
+  }
+  const closeChangePwModalBtn = document.getElementById('closeChangePwModalBtn');
+  if (closeChangePwModalBtn) {
+    closeChangePwModalBtn.addEventListener('click', closeChangePwModal);
+  }
+  const btnCancelChangePw = document.getElementById('btnCancelChangePw');
+  if (btnCancelChangePw) {
+    btnCancelChangePw.addEventListener('click', closeChangePwModal);
+  }
+  const changePwModal = document.getElementById('changePwModal');
+  if (changePwModal) {
+    changePwModal.addEventListener('click', (e) => {
+      if (e.target.id === 'changePwModal') closeChangePwModal();
+    });
+  }
+  const changePwForm = document.getElementById('changePwForm');
+  if (changePwForm) {
+    changePwForm.addEventListener('submit', handleChangePasswordSubmit);
+  }
+
+  // --- 어드민 대시보드 하위 탭 전환 리스너 ---
+  const adminTabMembers = document.getElementById('adminTabMembers');
+  if (adminTabMembers) {
+    adminTabMembers.addEventListener('click', () => switchAdminActiveTab('members'));
+  }
+  const adminTabInquiries = document.getElementById('adminTabInquiries');
+  if (adminTabInquiries) {
+    adminTabInquiries.addEventListener('click', () => switchAdminActiveTab('inquiries'));
+  }
 }
 
 // ==================== 로그인 및 세션 처리 ====================
@@ -1185,11 +1286,19 @@ function updateUserInfoUI() {
   }
 
   const sidebarEditBtnEl = document.getElementById('sidebarEditProfileBtn');
+  const sidebarChangePwBtnEl = document.getElementById('sidebarChangePwBtn');
   if (sidebarEditBtnEl) {
     if (user.isGuest) {
       sidebarEditBtnEl.classList.add('hidden');
     } else {
       sidebarEditBtnEl.classList.remove('hidden');
+    }
+  }
+  if (sidebarChangePwBtnEl) {
+    if (user.isGuest) {
+      sidebarChangePwBtnEl.classList.add('hidden');
+    } else {
+      sidebarChangePwBtnEl.classList.remove('hidden');
     }
   }
 }
@@ -1379,6 +1488,9 @@ function renderAdminDashboard() {
         <button class="btn btn-light btn-sm admin-edit-btn" data-id="${member.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px;">
           <i class="fa-solid fa-pen"></i> 수정
         </button>
+        <button class="btn btn-light btn-sm admin-reset-pw-btn" data-id="${member.id}" title="원우 비밀번호를 최초 전화번호 뒷자리로 리셋" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang-gold); border-color: rgba(197,160,89,0.3);">
+          <i class="fa-solid fa-rotate-left"></i> 초기화
+        </button>
         <button class="btn btn-light btn-sm admin-delete-btn" data-id="${member.id}" 
           ${isSuperAdminDisabled ? 'disabled' : ''} 
           style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
@@ -1417,7 +1529,15 @@ function renderAdminDashboard() {
       enableEditMode();
     });
 
-    // 3) 삭제 버튼 이벤트
+    // 3) 비밀번호 초기화 버튼 이벤트
+    const resetPwBtn = tr.querySelector('.admin-reset-pw-btn');
+    if (resetPwBtn) {
+      resetPwBtn.addEventListener('click', () => {
+        resetMemberPassword(member.id, member.name);
+      });
+    }
+
+    // 4) 삭제 버튼 이벤트
     const delBtn = tr.querySelector('.admin-delete-btn');
     if (delBtn && !isSuperAdminDisabled) {
       delBtn.addEventListener('click', async () => {
@@ -1804,13 +1924,15 @@ function openProfileModal(memberId) {
     });
   }
 
-  // 2. 편집 권한 체크 (본인 또는 운영진)
+  // 2. 편집 권한 체크 (원우 본인의 직접 수정은 차단하며, 오직 최고 관리자(admin)만 멤버 카드 수정이 가능합니다)
   const editBtn = document.getElementById('editProfileBtn');
-  const canEdit = state.currentUser && !state.currentUser.isGuest && (state.currentUser.id === member.id || state.isAdmin);
-  if (canEdit) {
-    editBtn.classList.remove('hidden');
-  } else {
-    editBtn.classList.add('hidden');
+  const canEdit = state.currentUser && !state.currentUser.isGuest && state.isAdmin;
+  if (editBtn) {
+    if (canEdit) {
+      editBtn.classList.remove('hidden');
+    } else {
+      editBtn.classList.add('hidden');
+    }
   }
 
   // 3. 편집 모드 양식 데이터 채워넣기 (이름, 전공, 기수, 자유기재 추가)
@@ -1906,6 +2028,12 @@ function cancelEditing() {
 // 편집 저장 처리
 async function saveProfileData(e) {
   e.preventDefault();
+  
+  if (!state.isAdmin) {
+    alert("프로필 수정 권한이 없습니다. (운영진만 프로필 수정이 가능합니다)");
+    cancelEditing();
+    return;
+  }
   
   const memberIndex = state.members.findIndex(m => m.id === state.selectedMemberId);
   if (memberIndex === -1) return;
@@ -3060,4 +3188,459 @@ function markNotificationsAsRead() {
   
   // 읽음 처리 후 알림 상태 다시 계산
   updateNotifications();
+}
+
+// ==================== 문의사항 및 건의 (Inquiry) 기능 ====================
+
+// 문의 모달 열기
+function openInquiryModal() {
+  const modal = document.getElementById('inquiryModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  switchInquiryTab('write');
+
+  // 작성자 기본값 채우기
+  const authorInput = document.getElementById('inquiryAuthor');
+  if (authorInput) {
+    if (state.currentUser && !state.currentUser.isGuest) {
+      authorInput.value = state.currentUser.name;
+      authorInput.readOnly = true;
+    } else {
+      authorInput.value = "";
+      authorInput.readOnly = false;
+    }
+  }
+
+  // 필드 리셋
+  const titleInput = document.getElementById('inquiryTitle');
+  const messageInput = document.getElementById('inquiryMessage');
+  if (titleInput) titleInput.value = "";
+  if (messageInput) messageInput.value = "";
+
+  // 내역 개수 표시
+  updateMyInquiriesCount();
+}
+
+// 문의 모달 닫기
+function closeInquiryModal() {
+  const modal = document.getElementById('inquiryModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// 문의 탭 전환
+function switchInquiryTab(tab) {
+  const tabWrite = document.getElementById('tabInquiryWrite');
+  const tabList = document.getElementById('tabInquiryList');
+  const viewWrite = document.getElementById('inquiryWriteView');
+  const viewList = document.getElementById('inquiryListView');
+
+  if (tab === 'write') {
+    tabWrite.classList.add('active');
+    tabWrite.style.borderBottom = "2px solid var(--color-sogang)";
+    tabWrite.style.color = "var(--color-sogang)";
+    tabWrite.style.fontWeight = "700";
+
+    tabList.classList.remove('active');
+    tabList.style.borderBottom = "none";
+    tabList.style.color = "var(--color-text-sub)";
+    tabList.style.fontWeight = "500";
+
+    viewWrite.classList.remove('hidden');
+    viewList.classList.add('hidden');
+  } else {
+    tabList.classList.add('active');
+    tabList.style.borderBottom = "2px solid var(--color-sogang)";
+    tabList.style.color = "var(--color-sogang)";
+    tabList.style.fontWeight = "700";
+
+    tabWrite.classList.remove('active');
+    tabWrite.style.borderBottom = "none";
+    tabWrite.style.color = "var(--color-text-sub)";
+    tabWrite.style.fontWeight = "500";
+
+    viewWrite.classList.add('hidden');
+    viewList.classList.remove('hidden');
+
+    renderMyInquiries();
+  }
+}
+
+// 내 문의 개수 갱신
+function updateMyInquiriesCount() {
+  const countEl = document.getElementById('myInquiryCount');
+  if (!countEl) return;
+  if (!state.currentUser || state.currentUser.isGuest) {
+    countEl.innerText = "0";
+    return;
+  }
+  const myCount = state.inquiries.filter(i => i.studentId === state.currentUser.id).length;
+  countEl.innerText = String(myCount);
+}
+
+// 문의 전송 제출
+async function handleInquirySubmit(e) {
+  e.preventDefault();
+  const authorInput = document.getElementById('inquiryAuthor');
+  const titleInput = document.getElementById('inquiryTitle');
+  const messageInput = document.getElementById('inquiryMessage');
+
+  const author = authorInput.value.trim();
+  const title = titleInput.value.trim();
+  const message = messageInput.value.trim();
+  const studentId = state.currentUser ? state.currentUser.id : 'guest';
+
+  if (!author || !message) return;
+
+  const now = new Date();
+  const nowStr = now.toISOString();
+
+  // 임시 고유 ID
+  const tempId = `inq_${Date.now()}`;
+
+  const newInq = {
+    id: tempId,
+    studentId,
+    author,
+    title,
+    message,
+    reply: "",
+    status: "pending",
+    createdAt: nowStr
+  };
+
+  // 로컬 상태 추가
+  state.inquiries.unshift(newInq);
+  localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+  // Supabase 동기화
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('inquiries')
+        .insert([{
+          student_id: studentId,
+          author,
+          title,
+          message,
+          reply: "",
+          status: "pending"
+        }]);
+      if (error) throw error;
+      await syncWithSupabase();
+    } catch (err) {
+      console.error("Supabase 문의 제출 에러:", err);
+    }
+  }
+
+  alert("문의사항이 운영진에게 성공적으로 전달되었습니다.");
+  messageInput.value = "";
+  titleInput.value = "";
+  
+  switchInquiryTab('list');
+}
+
+// 내 문의 내역 렌더링
+function renderMyInquiries() {
+  const container = document.getElementById('myInquiriesContainer');
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!state.currentUser || state.currentUser.isGuest) {
+    container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--color-text-dim);">로그인 후 문의 내역을 조회할 수 있습니다.</div>`;
+    return;
+  }
+
+  const myInqs = state.inquiries.filter(i => i.studentId === state.currentUser.id);
+  if (myInqs.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--color-text-dim);"><i class="fa-regular fa-folder-open" style="font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i> 아직 등록된 문의 내역이 없습니다.</div>`;
+    return;
+  }
+
+  myInqs.forEach(inq => {
+    const card = document.createElement('div');
+    card.className = 'my-inquiry-card';
+
+    const statusText = inq.status === 'resolved' ? '답변 완료' : '답변 대기';
+    const statusClass = inq.status === 'resolved' ? 'resolved' : 'pending';
+    const formattedDate = inq.createdAt ? inq.createdAt.substring(0, 10) + ' ' + inq.createdAt.substring(11, 16) : '-';
+
+    card.innerHTML = `
+      <div class="my-inquiry-header">
+        <strong style="color:var(--color-text-main); font-size:0.85rem;">${escapeHtml(inq.title || "제목 없음")}</strong>
+        <span class="inquiry-status-badge ${statusClass}">${statusText}</span>
+      </div>
+      <p style="margin: 0.2rem 0; color:var(--color-text-sub); line-height:1.4;">${escapeHtml(inq.message)}</p>
+      <div style="font-size:0.7rem; color:var(--color-text-dim); text-align:right;">${formattedDate}</div>
+      ${inq.reply ? `
+        <div class="inquiry-reply-box">
+          <strong style="color:var(--color-sogang); font-size:0.75rem;"><i class="fa-solid fa-reply"></i> 운영진 답변</strong>
+          <p style="margin-top:0.25rem; font-size:0.8rem; line-height:1.4; color:var(--color-text-main); white-space:pre-wrap;">${escapeHtml(inq.reply)}</p>
+        </div>
+      ` : ''}
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ==================== 비밀번호 변경 (Change Password) 기능 ====================
+
+// 비밀번호 변경 모달 열기
+function openChangePwModal() {
+  const modal = document.getElementById('changePwModal');
+  if (modal) modal.classList.remove('hidden');
+
+  // 인풋 초기화
+  const curEl = document.getElementById('currentPw');
+  const newEl = document.getElementById('newPw');
+  const confirmEl = document.getElementById('newPwConfirm');
+  const errEl = document.getElementById('changePwError');
+
+  if (curEl) curEl.value = "";
+  if (newEl) newEl.value = "";
+  if (confirmEl) confirmEl.value = "";
+  if (errEl) errEl.classList.add('hidden');
+}
+
+// 비밀번호 변경 모달 닫기
+function closeChangePwModal() {
+  const modal = document.getElementById('changePwModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// 비밀번호 변경 서브밋
+async function handleChangePasswordSubmit(e) {
+  e.preventDefault();
+  const currentPw = document.getElementById('currentPw').value.trim();
+  const newPw = document.getElementById('newPw').value.trim();
+  const newPwConfirm = document.getElementById('newPwConfirm').value.trim();
+  const errEl = document.getElementById('changePwError');
+
+  if (!state.currentUser || state.currentUser.isGuest) return;
+
+  // 1. 유효성 검사: 비밀번호는 최소 4글자 이상이어야 합니다.
+  if (newPw.length < 4) {
+    showPwError("새 비밀번호는 최소 4글자 이상이어야 합니다.");
+    return;
+  }
+
+  // 2. 일치 검사
+  if (newPw !== newPwConfirm) {
+    showPwError("새 비밀번호 확인이 일치하지 않습니다.");
+    return;
+  }
+
+  // 3. 현재 비밀번호 검증
+  // 로컬 members에서 나의 비밀번호와 같은지 대조
+  const myMember = state.members.find(m => m.id === state.currentUser.id);
+  if (!myMember || myMember.phoneLast4 !== currentPw) {
+    showPwError("현재 비밀번호가 정확하지 않습니다.");
+    return;
+  }
+
+  // 4. 비밀번호 업데이트 진행
+  myMember.phoneLast4 = newPw;
+  localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('members')
+        .update({ phone_last4: newPw })
+        .eq('id', state.currentUser.id);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Supabase 비밀번호 변경 서버 동기화 실패:", err);
+    }
+  }
+
+  alert("비밀번호가 안전하게 변경되었습니다. 다음 로그인부터 적용됩니다.");
+  closeChangePwModal();
+}
+
+function showPwError(msg) {
+  const errEl = document.getElementById('changePwError');
+  if (errEl) {
+    errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${escapeHtml(msg)}`;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// ==================== 관리자 비밀번호 초기화 기능 ====================
+async function resetMemberPassword(memberId, memberName) {
+  const confirmed = confirm(`정말로 [${memberName}] 원우의 비밀번호를 최초 정보로 초기화하시겠습니까?\n\n초기화 시 최초 가입에 기재된 전화번호 뒷자리 4자리로 리셋됩니다.`);
+  if (!confirmed) return;
+
+  // data.js 시드 데이터에서 해당 학번의 최초 phoneLast4를 가져옴
+  const seedMember = INITIAL_MEMBERS.find(m => m.id === memberId);
+  const resetPw = seedMember ? seedMember.phoneLast4 : "1234"; // 혹은 없으면 기본 1234
+
+  // 로컬 상태 변경
+  const targetMember = state.members.find(m => m.id === memberId);
+  if (targetMember) {
+    targetMember.phoneLast4 = resetPw;
+    localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+  }
+
+  // Supabase 클라우드 적용
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('members')
+        .update({ phone_last4: resetPw })
+        .eq('id', memberId);
+      if (error) throw error;
+      alert(`[${memberName}] 원우의 비밀번호가 가입 시 전화번호 뒷자리 [${resetPw}] (으)로 성공적으로 초기화되었습니다.`);
+    } catch (err) {
+      console.error("Supabase 비밀번호 초기화 서버 전송 실패:", err);
+      alert("서버 연결 실패로 인해 로컬에서만 초기화되었습니다.");
+    }
+  }
+}
+
+// ==================== 어드민 대시보드 내 문의 탭 및 답변 처리 ====================
+
+// 어드민 탭 스위치
+function switchAdminActiveTab(tab) {
+  state.adminActiveTab = tab;
+  const tabMembers = document.getElementById('adminTabMembers');
+  const tabInquiries = document.getElementById('adminTabInquiries');
+  const secMembers = document.getElementById('adminMembersSection');
+  const secInquiries = document.getElementById('adminInquirySection');
+
+  if (tab === 'members') {
+    tabMembers.classList.add('active-tab');
+    tabInquiries.classList.remove('active-tab');
+    secMembers.classList.remove('hidden');
+    secInquiries.classList.add('hidden');
+    renderAdminDashboard();
+  } else {
+    tabInquiries.classList.add('active-tab');
+    tabMembers.classList.remove('active-tab');
+    secInquiries.classList.remove('hidden');
+    secMembers.classList.add('hidden');
+    renderAdminInquiries();
+  }
+}
+
+// 어드민 문의 목록 렌더링
+function renderAdminInquiries() {
+  const tbody = document.getElementById('adminInquiryTableBody');
+  const countEl = document.getElementById('adminInquiryCount');
+  if (countEl) {
+    countEl.innerText = String(state.inquiries.length);
+  }
+
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (state.inquiries.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--color-text-dim); padding: 3rem;">
+          <i class="fa-regular fa-envelope-open" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>
+          접수된 건의 및 문의사항이 없습니다.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  state.inquiries.forEach(inq => {
+    const tr = document.createElement('tr');
+
+    const formattedDate = inq.createdAt ? inq.createdAt.substring(0, 16).replace('T', ' ') : '-';
+    const statusText = inq.status === 'resolved' ? '답변 완료' : '접수 대기';
+    const statusClass = inq.status === 'resolved' ? 'resolved' : 'pending';
+
+    tr.innerHTML = `
+      <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(inq.author)}</td>
+      <td style="font-family: monospace; color: var(--color-text-sub);">${escapeHtml(inq.studentId)}</td>
+      <td style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(inq.title || "제목 없음")}</td>
+      <td style="word-break: break-all; line-height: 1.4; max-height: 100px; overflow-y: auto; padding: 0.5rem;">${escapeHtml(inq.message)}</td>
+      <td style="font-size: 0.72rem; color: var(--color-text-dim);">${formattedDate}</td>
+      <td><span class="inquiry-status-badge ${statusClass}">${statusText}</span></td>
+      <td>
+        <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+          <div style="display: flex; gap: 0.3rem; align-items: flex-end;">
+            <textarea class="reply-input-${inq.id}" rows="2" placeholder="답변을 작성해 주세요..." style="flex: 1; font-family: var(--font-body); font-size: 0.78rem; padding: 0.3rem; border: 1px solid var(--color-border); border-radius: 4px; resize: none;">${escapeHtml(inq.reply || "")}</textarea>
+            <button class="btn btn-sogang btn-sm btn-save-reply" data-id="${inq.id}" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 4px; height: 38px;">답변</button>
+          </div>
+          <div style="text-align: right;">
+            <button class="btn btn-light btn-sm btn-delete-inquiry" data-id="${inq.id}" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; color: var(--color-sogang); border-color: rgba(179,8,56,0.15); border-radius: 4px;">
+              <i class="fa-solid fa-trash-can"></i> 삭제
+            </button>
+          </div>
+        </div>
+      </td>
+    `;
+
+    // 답변 저장 바인딩
+    tr.querySelector('.btn-save-reply').addEventListener('click', () => {
+      const replyText = tr.querySelector(`.reply-input-${inq.id}`).value.trim();
+      submitAdminReply(inq.id, replyText);
+    });
+
+    // 문의 삭제 바인딩
+    tr.querySelector('.btn-delete-inquiry').addEventListener('click', () => {
+      deleteInquiry(inq.id);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// 운영진 답변 저장
+async function submitAdminReply(inquiryId, replyText) {
+  if (!replyText) {
+    alert("답변 내용을 입력해 주세요.");
+    return;
+  }
+
+  const targetInq = state.inquiries.find(i => i.id === inquiryId);
+  if (targetInq) {
+    targetInq.reply = replyText;
+    targetInq.status = "resolved";
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+  }
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('inquiries')
+        .update({ reply: replyText, status: "resolved" })
+        .eq('id', inquiryId);
+      if (error) throw error;
+      alert("답변이 정상적으로 등록 및 저장되었습니다.");
+      await syncWithSupabase();
+      renderAdminInquiries();
+    } catch (err) {
+      console.error("Supabase 답변 업데이트 실패:", err);
+      alert("서버 연결 실패로 인해 로컬 스토리지에만 저장되었습니다.");
+    }
+  }
+}
+
+// 접수된 문의 삭제
+async function deleteInquiry(inquiryId) {
+  const confirmed = confirm("이 문의 건을 완전히 삭제하시겠습니까?\n삭제된 문의는 복원할 수 없습니다.");
+  if (!confirmed) return;
+
+  state.inquiries = state.inquiries.filter(i => i.id !== inquiryId);
+  localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('inquiries')
+        .delete()
+        .eq('id', inquiryId);
+      if (error) throw error;
+      alert("문의 내역이 완전히 삭제되었습니다.");
+      await syncWithSupabase();
+      renderAdminInquiries();
+    } catch (err) {
+      console.error("Supabase 문의 삭제 실패:", err);
+      alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
+    }
+  }
 }

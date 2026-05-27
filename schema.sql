@@ -78,3 +78,17 @@ CREATE POLICY "Anyone can Update" ON storage.objects
 -- 누구나 자신의 프로필 이미지를 삭제할 수 있는 권한 정책 부여
 CREATE POLICY "Anyone can Delete" ON storage.objects 
     FOR DELETE USING (bucket_id = 'avatars');
+
+-- 5. inquiries 테이블 생성 (운영진 문의 및 건의 소통)
+CREATE TABLE IF NOT EXISTS public.inquiries (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id text NOT NULL,
+    author text NOT NULL,
+    title text,
+    message text NOT NULL,
+    reply text,
+    status text DEFAULT 'pending',
+    created_at timestamp with time zone DEFAULT now()
+);
+ALTER TABLE public.inquiries DISABLE ROW LEVEL SECURITY;
+
