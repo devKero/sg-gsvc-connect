@@ -338,14 +338,8 @@
               <!-- 방명록 등록 상자 -->
               <div class="modal-guestbook-form-box" id="modalGuestbookFormBox" style="background-color: #f9f9f9; padding: 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin: 0.75rem 0 1rem;">
                 <form id="modalCommentForm" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                  <div class="form-row" style="display: grid; grid-template-columns: 1fr 100px 120px; gap: 0.5rem; align-items: center;">
+                  <div class="form-row" style="display: grid; grid-template-columns: 1fr 120px; gap: 0.5rem; align-items: center;">
                     <input type="text" id="modalCommentAuthor" placeholder="작성자 이름" required maxlength="15" style="font-size: 0.78rem; padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid var(--color-border);">
-                    <select id="modalCommentTag" title="종류" style="font-size: 0.78rem; padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid var(--color-border); cursor: pointer;">
-                      <option value="cheer">🔥 응원</option>
-                      <option value="question">❓ 질문</option>
-                      <option value="coffee">☕ 커피조공</option>
-                      <option value="feedback">🎯 피드백</option>
-                    </select>
                     <label style="font-size: 0.75rem; color: var(--color-text-sub); display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; user-select: none;">
                       <input type="checkbox" id="modalCommentPrivate" style="cursor: pointer;"> <i class="fa-solid fa-lock" style="font-size:0.7rem;"></i> 비공개 설정
                     </label>

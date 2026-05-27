@@ -2181,18 +2181,10 @@ async function handleDeleteMember(memberId, name) {
   }
 }
 
-// ==================== 개인 방명록 처리 (모달 내부 바인딩) ====================
 function renderPersonalGuestbook(memberId) {
   const container = document.getElementById('modalCommentsList');
   if (!container) return;
   container.innerHTML = "";
-
-  const tagLabels = {
-    cheer: "응원",
-    question: "질문",
-    coffee: "커피조공",
-    feedback: "피드백"
-  };
 
   // 이 멤버에게 달린 방명록만 필터링
   const comments = state.guestbook.filter(log => log.targetMemberId === memberId);
@@ -2211,24 +2203,16 @@ function renderPersonalGuestbook(memberId) {
 
     let canDelete = state.currentUser && (state.isAdmin || isOwner || isAuthor);
 
-    let badgeClass = log.tag;
-    let badgeText = tagLabels[log.tag] || "로그";
     let messageBody = escapeHtml(log.message);
 
     if (log.isPrivate) {
       card.className = 'comment-card private-message';
-      badgeClass = 'private';
-      badgeText = '🔒 비공개';
       
       if (isAuthorized) {
         card.classList.add('authorized');
         messageBody = `<span class="masked-text" style="color: var(--color-sogang);"><i class="fa-solid fa-lock-open"></i> [나만 보기]</span><br>${messageBody}`;
       } else {
         messageBody = `<span class="masked-text"><i class="fa-solid fa-lock"></i> 비공개 메시지입니다. (카드 주인과 작성자만 열람 가능)</span>`;
-        // 열람 권한이 없으면 삭제도 할 수 없음 (단, 운영진나 카드 주인은 삭제 가능)
-        if (!state.isAdmin && !isOwner) {
-          canDelete = false;
-        }
       }
     } else {
       card.className = 'comment-card';
@@ -2238,7 +2222,7 @@ function renderPersonalGuestbook(memberId) {
       <div class="comment-header" style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
         <div class="comment-meta" style="display:flex; align-items:center; gap:0.4rem;">
           <span class="comment-name" style="font-weight:700;"><i class="fa-solid fa-circle-user"></i> ${escapeHtml(log.author)}</span>
-          <span class="comment-badge-tag ${badgeClass}">${badgeText}</span>
+          ${log.isPrivate ? `<span class="comment-badge-tag private">🔒 비공개</span>` : ''}
         </div>
         <span class="comment-time" style="color: var(--color-text-dim); font-size:0.68rem;">${log.timestamp}</span>
       </div>
@@ -2273,12 +2257,11 @@ async function handleModalCommentSubmit(e) {
   e.preventDefault();
   const authorInput = document.getElementById('modalCommentAuthor');
   const messageInput = document.getElementById('modalCommentMessage');
-  const tagInput = document.getElementById('modalCommentTag');
   const privateInput = document.getElementById('modalCommentPrivate');
 
   const author = authorInput.value.trim();
   const message = messageInput.value.trim();
-  const tag = tagInput.value;
+  const tag = 'general';
   const isPrivate = privateInput.checked;
   const targetMemberId = state.selectedMemberId;
 
@@ -2996,18 +2979,10 @@ function updateNotifications() {
     return;
   }
   
-  const tagLabels = {
-    cheer: '응원',
-    question: '질문',
-    coffee: '커피조공',
-    feedback: '피드백'
-  };
-  
   state.notifications.forEach(notif => {
     const item = document.createElement('div');
     item.className = `notif-item ${notif.isUnread ? 'unread' : ''}`;
     
-    const tagLabel = tagLabels[notif.tag] || '로그';
     let previewText = notif.isPrivate ? '🔒 비공개 방명록을 남겼습니다.' : notif.message;
     if (previewText.length > 35) {
       previewText = previewText.substring(0, 35) + '...';
@@ -3015,7 +2990,7 @@ function updateNotifications() {
     
     item.innerHTML = `
       <div class="notif-item-body">
-        <strong>${escapeHtml(notif.author)}</strong> 님이 나에게 <strong>"${tagLabel}"</strong> 메시지를 작성했습니다:
+        <strong>${escapeHtml(notif.author)}</strong> 님이 나에게 방명록을 남겼습니다:
         <span style="color: var(--color-text-sub); display: block; margin-top: 0.15rem; font-style: ${notif.isPrivate ? 'italic' : 'normal'};">${escapeHtml(previewText)}</span>
       </div>
       <div class="notif-item-time">${notif.timestamp}</div>
