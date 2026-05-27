@@ -391,149 +391,72 @@ async function syncWithSupabase() {
     // 3. majors 테이블 데이터 조회 제거됨
 
     // 만약 클라우드에 멤버 데이터가 아예 없거나 admin만 있다면, 초기 멤버 35인을 클라우드에 벌크 인서트(시드 데이터 주입)
-    if (dbMembers.length <= 1) {
-      console.log("Supabase에 초기 데이터가 없거나 admin만 존재하여 INITIAL_MEMBERS 시드 데이터를 주입합니다...");
-      
-      const seedMembers = INITIAL_MEMBERS.map(m => {
-        let email = m.email || "";
-        let snsLinks = m.snsLinks ? JSON.parse(JSON.stringify(m.snsLinks)) : [];
+    // 클라우드 데이터로 로컬 메모리 상태 갱신 및 로컬 스토리지 백업 동기화
+    state.members = dbMembers.map(m => {
+      let snsLinks = [];
+      let email = m.email || "";
+      if (m.sns_links) {
+        snsLinks = typeof m.sns_links === 'string' ? JSON.parse(m.sns_links) : m.sns_links;
         const emailIdx = snsLinks.findIndex(link => link.type === 'email');
         if (emailIdx !== -1) {
           if (!email) email = snsLinks[emailIdx].value || "";
           snsLinks.splice(emailIdx, 1);
         }
-        return {
-          id: m.id,
-          student_id: m.studentId,
-          phone_last4: m.phoneLast4,
-          name: m.name,
-          email: email,
-          class_year: m.classYear,
-          generation: m.generation,
-          headline: m.headline,
-          avatar_color: m.avatarColor,
-          sns_links: snsLinks,
-          tags: m.tags || [],
-          bio: m.bio || "",
-          projects: m.projects || "",
-          custom_content: m.customContent || "",
-          avatar_image: m.avatarImage || null,
-          degree_process: m.degreeProcess || "석사",
-          academic_status: m.academicStatus || "재학",
-          education: m.education || "",
-          experience: m.experience || "",
-          role: m.role || "member"
-        };
-      });
-
-      const { error: seedError } = await supabaseClient
-        .from('members')
-        .upsert(seedMembers);
-      if (seedError) throw seedError;
-      
-      // 방명록 시드 데이터도 주입
-      const { error: seedGuestError } = await supabaseClient
-        .from('guestbook')
-        .insert(INITIAL_GUESTBOOK.map(g => ({
-          target_member_id: g.targetMemberId,
-          author: g.author,
-          message: g.message,
-          tag: g.tag,
-          is_private: g.isPrivate,
-          timestamp: g.timestamp,
-          likes: g.likes || 0
-        })));
-      if (seedGuestError) throw seedGuestError;
-
-      console.log("Supabase 시드 데이터 주입 완료!");
-      
-      // 주입 후 다시 로드
-      await syncWithSupabase();
-    } else {
-      // 관리자 비밀번호 자동 동기화 헬퍼 (로컬 코드의 새로운 관리자 비밀번호를 DB에 강제 반영)
-      const localAdmin = INITIAL_MEMBERS.find(m => m.id === 'admin');
-      const dbAdmin = dbMembers.find(m => m.id === 'admin');
-      if (localAdmin && dbAdmin && dbAdmin.phone_last4 !== localAdmin.phoneLast4) {
-        console.log("관리자 비밀번호가 변경되어 클라우드 DB에 동기화합니다...");
-        supabaseClient
-          .from('members')
-          .update({ phone_last4: localAdmin.phoneLast4 })
-          .eq('id', 'admin')
-          .then(({ error }) => {
-            if (error) console.error("관리자 비밀번호 동기화 에러:", error);
-            else console.log("관리자 비밀번호 동기화 완료!");
-          });
+      } else {
+        if (m.email) email = m.email;
+        if (m.github) snsLinks.push({ type: "github", value: m.github });
+        if (m.blog) snsLinks.push({ type: "blog", value: m.blog });
       }
+      return {
+        id: m.id,
+        studentId: m.student_id,
+        phoneLast4: m.phone_last4,
+        name: m.name,
+        email: email,
+        classYear: m.class_year,
+        generation: m.generation,
+        headline: m.headline,
+        avatarColor: m.avatar_color,
+        snsLinks: snsLinks,
+        tags: m.tags || [],
+        bio: m.bio,
+        projects: m.projects,
+        customContent: m.custom_content,
+        avatarImage: m.avatar_image,
+        degreeProcess: m.degree_process || "석사",
+        academicStatus: m.academic_status || "재학",
+        education: m.education || "",
+        experience: m.experience || "",
+        role: m.role || "member"
+      };
+    });
+    localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
 
-      // 클라우드 데이터로 로컬 메모리 상태 갱신 및 로컬 스토리지 백업 동기화
-      state.members = dbMembers.map(m => {
-        let snsLinks = [];
-        let email = m.email || "";
-        if (m.sns_links) {
-          snsLinks = typeof m.sns_links === 'string' ? JSON.parse(m.sns_links) : m.sns_links;
-          const emailIdx = snsLinks.findIndex(link => link.type === 'email');
-          if (emailIdx !== -1) {
-            if (!email) email = snsLinks[emailIdx].value || "";
-            snsLinks.splice(emailIdx, 1);
-          }
-        } else {
-          if (m.email) email = m.email;
-          if (m.github) snsLinks.push({ type: "github", value: m.github });
-          if (m.blog) snsLinks.push({ type: "blog", value: m.blog });
-        }
-        return {
-          id: m.id,
-          studentId: m.student_id,
-          phoneLast4: m.phone_last4,
-          name: m.name,
-          email: email,
-          classYear: m.class_year,
-          generation: m.generation,
-          headline: m.headline,
-          avatarColor: m.avatar_color,
-          snsLinks: snsLinks,
-          tags: m.tags || [],
-          bio: m.bio,
-          projects: m.projects,
-          customContent: m.custom_content,
-          avatarImage: m.avatar_image,
-          degreeProcess: m.degree_process || "석사",
-          academicStatus: m.academic_status || "재학",
-          education: m.education || "",
-          experience: m.experience || "",
-          role: m.role || "member"
-        };
-      });
-      localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+    state.guestbook = dbGuestbook.map(g => ({
+      id: g.id,
+      targetMemberId: g.target_member_id,
+      author: g.author,
+      message: g.message,
+      tag: g.tag,
+      isPrivate: g.is_private,
+      timestamp: g.timestamp,
+      likes: g.likes || 0
+    }));
+    localStorage.setItem('sogang_unity_guestbook', JSON.stringify(state.guestbook));
 
-      state.guestbook = dbGuestbook.map(g => ({
-        id: g.id,
-        targetMemberId: g.target_member_id,
-        author: g.author,
-        message: g.message,
-        tag: g.tag,
-        isPrivate: g.is_private,
-        timestamp: g.timestamp,
-        likes: g.likes || 0
-      }));
-      localStorage.setItem('sogang_unity_guestbook', JSON.stringify(state.guestbook));
-
-      // 문의사항 데이터 갱신
-      state.inquiries = dbInquiries.map(i => ({
-        id: i.id,
-        studentId: i.student_id,
-        author: i.author,
-        title: i.title || "",
-        message: i.message,
-        reply: i.reply || "",
-        repliedBy: i.replied_by || "", // 답변한 운영진 기록 필드 연동
-        status: i.status || "pending",
-        createdAt: i.created_at
-      }));
-      localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
-
-      // 전공 목록 동기화 제거됨
-    }
+    // 문의사항 데이터 갱신
+    state.inquiries = dbInquiries.map(i => ({
+      id: i.id,
+      studentId: i.student_id,
+      author: i.author,
+      title: i.title || "",
+      message: i.message,
+      reply: i.reply || "",
+      repliedBy: i.replied_by || "", // 답변한 운영진 기록 필드 연동
+      status: i.status || "pending",
+      createdAt: i.created_at
+    }));
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
     console.log("Supabase 클라우드 데이터베이스와 양방향 동기화 완료.");
   } catch (err) {
     console.error("Supabase 데이터 연동 실패 (로컬 스토리지 오프라인 모드 유지):", err);
@@ -3530,12 +3453,10 @@ function showPwError(msg) {
 
 // ==================== 관리자 비밀번호 초기화 기능 ====================
 async function resetMemberPassword(memberId, memberName) {
-  const confirmed = confirm(`정말로 [${memberName}] 원우의 비밀번호를 최초 정보로 초기화하시겠습니까?\n\n초기화 시 최초 가입에 기재된 전화번호 뒷자리 4자리로 리셋됩니다.`);
+  const confirmed = confirm(`정말로 [${memberName}] 원우의 비밀번호를 초기화하시겠습니까?\n\n초기화 시 기본 비밀번호 [1234] (으)로 리셋됩니다.`);
   if (!confirmed) return;
 
-  // data.js 시드 데이터에서 해당 학번의 최초 phoneLast4를 가져옴
-  const seedMember = INITIAL_MEMBERS.find(m => m.id === memberId);
-  const resetPw = seedMember ? seedMember.phoneLast4 : "1234"; // 혹은 없으면 기본 1234
+  const resetPw = "1234"; // 기본 비밀번호 1234로 초기화
 
   // 로컬 상태 변경
   const targetMember = state.members.find(m => m.id === memberId);
