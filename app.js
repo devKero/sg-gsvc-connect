@@ -2642,9 +2642,7 @@ function downloadExcelTemplate() {
       "기수 (숫자)",
       "소속전공",
       "학위과정",
-      "비밀번호 뒷자리 (4자리 필수)",
-      "한줄소개",
-      "이메일"
+      "비밀번호 뒷자리 (4자리 필수)"
     ];
     
     const sampleRow = [
@@ -2653,9 +2651,7 @@ function downloadExcelTemplate() {
       10,
       "메타버스 전공",
       "석사",
-      "1234",
-      "인터랙티브 3D 콘텐츠 최적화에 관심이 있는 프로그래머",
-      "hong@sogang.ac.kr"
+      "1234"
     ];
 
     const data = [header, sampleRow];
@@ -2671,9 +2667,7 @@ function downloadExcelTemplate() {
       { wch: 10 }, // 기수
       { wch: 20 }, // 전공
       { wch: 12 }, // 과정
-      { wch: 28 }, // 비밀번호 뒷자리
-      { wch: 50 }, // 한줄소개
-      { wch: 25 }  // 이메일
+      { wch: 28 }  // 비밀번호 뒷자리
     ];
 
     // 4. 워크시트를 워크북에 주입
@@ -2724,8 +2718,8 @@ function handleExcelFileSelected(e) {
           classYear: String(rowData[3] || "").trim(),
           degreeProcess: String(rowData[4] || "").trim(),
           phoneLast4: String(rowData[5] || "").trim(),
-          headline: String(rowData[6] || "").trim(),
-          email: String(rowData[7] || "").trim()
+          headline: "서강대 가상융합전문대학원 원우", // 한줄소개 제거에 따른 기본값
+          email: "" // 이메일 제거에 따른 기본값
         });
       }
 
