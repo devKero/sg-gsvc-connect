@@ -120,8 +120,11 @@ function getSnsLinksCardHtml(snsLinks) {
 }
 
 function validateEmail(email) {
+  if (!email || email.trim() === "") {
+    return true; // 빈 값 허용 (선택 사항)
+  }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email || !emailRegex.test(email.trim())) {
+  if (!emailRegex.test(email.trim())) {
     alert("올바른 이메일 주소 형식을 입력해 주세요.");
     return false;
   }
@@ -1074,6 +1077,50 @@ function setupEventListeners() {
   const adminTabInquiries = document.getElementById('adminTabInquiries');
   if (adminTabInquiries) {
     adminTabInquiries.addEventListener('click', () => switchAdminActiveTab('inquiries'));
+  }
+
+  // --- 개인정보 처리방침 모달 관련 리스너 ---
+  const btnLoginShowPrivacy = document.getElementById('btnLoginShowPrivacy');
+  if (btnLoginShowPrivacy) {
+    btnLoginShowPrivacy.addEventListener('click', openPrivacyModal);
+  }
+  const btnShowPrivacy = document.getElementById('btnShowPrivacy');
+  if (btnShowPrivacy) {
+    btnShowPrivacy.addEventListener('click', openPrivacyModal);
+  }
+  const closePrivacyModalBtn = document.getElementById('closePrivacyModalBtn');
+  if (closePrivacyModalBtn) {
+    closePrivacyModalBtn.addEventListener('click', closePrivacyModal);
+  }
+  const btnConfirmPrivacy = document.getElementById('btnConfirmPrivacy');
+  if (btnConfirmPrivacy) {
+    btnConfirmPrivacy.addEventListener('click', closePrivacyModal);
+  }
+  const privacyModal = document.getElementById('privacyModal');
+  if (privacyModal) {
+    privacyModal.addEventListener('click', (e) => {
+      if (e.target.id === 'privacyModal') {
+        closePrivacyModal();
+      }
+    });
+  }
+}
+
+// 개인정보 처리방침 모달 제어 함수
+function openPrivacyModal(e) {
+  if (e) e.preventDefault();
+  const modal = document.getElementById('privacyModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closePrivacyModal() {
+  const modal = document.getElementById('privacyModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
   }
 }
 
