@@ -213,6 +213,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 로컬 스토리지 데이터 로드 및 초기화
 function initLocalStorage() {
+  // 캐시 강제 갱신 버전 관리 (김서강, 이알바 등 구버전 테스트 데이터를 완전히 밀어버립니다)
+  const CACHE_VERSION = "v20260527_v2";
+  const storedVer = localStorage.getItem('sogang_unity_cache_ver');
+  if (storedVer !== CACHE_VERSION) {
+    localStorage.removeItem('sogang_unity_members');
+    localStorage.removeItem('sogang_unity_guestbook');
+    localStorage.removeItem('sogang_unity_inquiries');
+    localStorage.setItem('sogang_unity_cache_ver', CACHE_VERSION);
+  }
+
   let storedMembers = localStorage.getItem('sogang_unity_members');
   let resetNeeded = false;
 
