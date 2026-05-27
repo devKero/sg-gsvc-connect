@@ -383,36 +383,48 @@ async function syncWithSupabase() {
     // 만약 클라우드에 멤버 데이터가 아예 없거나 admin만 있다면, 초기 멤버 35인을 클라우드에 벌크 인서트(시드 데이터 주입)
     if (dbMembers.length <= 1) {
       console.log("Supabase에 초기 데이터가 없거나 admin만 존재하여 INITIAL_MEMBERS 시드 데이터를 주입합니다...");
-      const { error: seedError } = await supabaseClient
-        .from('members')
-        .upsert(state.members.map(m => ({
+      
+      const seedMembers = INITIAL_MEMBERS.map(m => {
+        let email = m.email || "";
+        let snsLinks = m.snsLinks ? JSON.parse(JSON.stringify(m.snsLinks)) : [];
+        const emailIdx = snsLinks.findIndex(link => link.type === 'email');
+        if (emailIdx !== -1) {
+          if (!email) email = snsLinks[emailIdx].value || "";
+          snsLinks.splice(emailIdx, 1);
+        }
+        return {
           id: m.id,
           student_id: m.studentId,
           phone_last4: m.phoneLast4,
           name: m.name,
-          email: m.email || "",
+          email: email,
           class_year: m.classYear,
           generation: m.generation,
           headline: m.headline,
           avatar_color: m.avatarColor,
-          sns_links: m.snsLinks || [],
-          tags: m.tags,
-          bio: m.bio,
-          projects: m.projects,
-          custom_content: m.customContent,
-          avatar_image: m.avatarImage,
+          sns_links: snsLinks,
+          tags: m.tags || [],
+          bio: m.bio || "",
+          projects: m.projects || "",
+          custom_content: m.customContent || "",
+          avatar_image: m.avatarImage || null,
           degree_process: m.degreeProcess || "석사",
           academic_status: m.academicStatus || "재학",
           education: m.education || "",
           experience: m.experience || "",
           role: m.role || "member"
-        })));
+        };
+      });
+
+      const { error: seedError } = await supabaseClient
+        .from('members')
+        .upsert(seedMembers);
       if (seedError) throw seedError;
       
       // 방명록 시드 데이터도 주입
       const { error: seedGuestError } = await supabaseClient
         .from('guestbook')
-        .insert(state.guestbook.map(g => ({
+        .insert(INITIAL_GUESTBOOK.map(g => ({
           target_member_id: g.targetMemberId,
           author: g.author,
           message: g.message,
@@ -1773,6 +1785,14 @@ function renderMembersGrid() {
 
     // 상세 보기 버튼 클릭
     card.querySelector('.btn-view-profile').addEventListener('click', () => {
+      openProfileModal(member.id);
+    });
+
+    // 카드 전체 클릭으로도 상세 모달 열기 (모바일 대응)
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', (e) => {
+      // 카드 내부 인터랙티브 요소 클릭 시에는 무시
+      if (e.target.closest('.card-delete-btn, .copy-email-btn, .contact-icon, .btn-view-profile, a')) return;
       openProfileModal(member.id);
     });
 
