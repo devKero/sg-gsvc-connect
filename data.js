@@ -303,7 +303,7 @@ export const INITIAL_MEMBERS = [
   {
     id: "admin",
     studentId: "admin",
-    phoneLast4: "0000",
+    phoneLast4: "sogang_gsvc_admin2026!",
     name: "시스템 관리자",
     classYear: "디렉토리 관리",
     generation: null,

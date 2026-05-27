@@ -404,6 +404,21 @@ async function syncWithSupabase() {
       // 주입 후 다시 로드
       await syncWithSupabase();
     } else {
+      // 관리자 비밀번호 자동 동기화 헬퍼 (로컬 코드의 새로운 관리자 비밀번호를 DB에 강제 반영)
+      const localAdmin = INITIAL_MEMBERS.find(m => m.id === 'admin');
+      const dbAdmin = dbMembers.find(m => m.id === 'admin');
+      if (localAdmin && dbAdmin && dbAdmin.phone_last4 !== localAdmin.phoneLast4) {
+        console.log("관리자 비밀번호가 변경되어 클라우드 DB에 동기화합니다...");
+        supabaseClient
+          .from('members')
+          .update({ phone_last4: localAdmin.phoneLast4 })
+          .eq('id', 'admin')
+          .then(({ error }) => {
+            if (error) console.error("관리자 비밀번호 동기화 에러:", error);
+            else console.log("관리자 비밀번호 동기화 완료!");
+          });
+      }
+
       // 클라우드 데이터로 로컬 메모리 상태 갱신 및 로컬 스토리지 백업 동기화
       state.members = dbMembers.map(m => {
         let snsLinks = [];
