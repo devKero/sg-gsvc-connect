@@ -28,6 +28,8 @@ let state = {
   excelConflictsResolvedCount: 0, // 해결된 중복 학번 수
   selectedTag: '',         // 선택된 해시태그 필터
   selectedGeneration: '',  // 선택된 기수 필터 ("" 이면 전체 기수)
+  selectedMajor: '',       // 선택된 전공 필터 ("" 이면 전체 전공)
+  selectedDegree: '',      // 선택된 학위 과정 필터 ("" 이면 전체 과정)
   viewMode: 'grid',        // 'grid' 또는 'list' (대용량 뷰 모드)
   activeMainTab: 'directory', // 'directory' 또는 'feed' (메인 대시보드 탭)
   isAdmin: false,          // 운영진 권한 여부
@@ -40,7 +42,8 @@ let state = {
   notifications: [],        // 내 프로필에 달린 알림 목록
   unreadNotifCount: 0,      // 미확인 알림 수
   inquiries: [],           // 문의/건의 데이터
-  adminActiveTab: 'members' // 어드민 하위 탭 ('members', 'inquiries')
+  adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries')
+  adminInquirySubTab: 'active' // 어드민 문의 하위 탭 ('active', 'trash')
 };
 
 const AVATAR_COLORS = [
@@ -638,17 +641,75 @@ function setupEventListeners() {
     state.selectedGeneration = e.target.value;
     state.selectedTag = '';
     const clearBtn = document.getElementById('clearFilterBtn');
-    if (clearBtn) clearBtn.classList.add('hidden');
+    if (clearBtn) {
+      if (state.selectedGeneration || state.selectedMajor || state.selectedDegree) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+    }
     renderFilterTags();
     renderMembersGrid();
   });
 
-  // 태그 필터 초기화 버튼
+  // 전공 필터 변경
+  const majorFilterEl = document.getElementById('majorFilter');
+  if (majorFilterEl) {
+    majorFilterEl.addEventListener('change', (e) => {
+      state.selectedMajor = e.target.value;
+      state.selectedTag = '';
+      const clearBtn = document.getElementById('clearFilterBtn');
+      if (clearBtn) {
+        if (state.selectedGeneration || state.selectedMajor || state.selectedDegree) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+      }
+      renderFilterTags();
+      renderMembersGrid();
+    });
+  }
+
+  // 학위과정 필터 변경
+  const degreeFilterEl = document.getElementById('degreeFilter');
+  if (degreeFilterEl) {
+    degreeFilterEl.addEventListener('change', (e) => {
+      state.selectedDegree = e.target.value;
+      state.selectedTag = '';
+      const clearBtn = document.getElementById('clearFilterBtn');
+      if (clearBtn) {
+        if (state.selectedGeneration || state.selectedMajor || state.selectedDegree) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+      }
+      renderFilterTags();
+      renderMembersGrid();
+    });
+  }
+
+  // 태그 및 상세 필터 초기화 버튼
   document.getElementById('clearFilterBtn').addEventListener('click', () => {
     state.selectedTag = '';
     state.tagSearchTerm = '';
+    state.selectedGeneration = '';
+    state.selectedMajor = '';
+    state.selectedDegree = '';
+    
     const tagSearchInput = document.getElementById('tagSearchInput');
     if (tagSearchInput) tagSearchInput.value = '';
+
+    const genSelect = document.getElementById('generationFilter');
+    if (genSelect) genSelect.value = '';
+
+    const majorSelect = document.getElementById('majorFilter');
+    if (majorSelect) majorSelect.value = '';
+
+    const degreeSelect = document.getElementById('degreeFilter');
+    if (degreeSelect) degreeSelect.value = '';
+
     document.getElementById('clearFilterBtn').classList.add('hidden');
     document.querySelectorAll('.btn-tag').forEach(b => b.classList.remove('active'));
     renderFilterTags();
@@ -1078,6 +1139,14 @@ function setupEventListeners() {
   if (adminTabInquiries) {
     adminTabInquiries.addEventListener('click', () => switchAdminActiveTab('inquiries'));
   }
+  const adminInqTabActive = document.getElementById('adminInqTabActive');
+  if (adminInqTabActive) {
+    adminInqTabActive.addEventListener('click', () => switchAdminInquirySubTab('active'));
+  }
+  const adminInqTabTrash = document.getElementById('adminInqTabTrash');
+  if (adminInqTabTrash) {
+    adminInqTabTrash.addEventListener('click', () => switchAdminInquirySubTab('trash'));
+  }
 
   // --- 개인정보 처리방침 모달 관련 리스너 ---
   const btnLoginShowPrivacy = document.getElementById('btnLoginShowPrivacy');
@@ -1236,7 +1305,7 @@ function enterDashboard() {
   switchViewMode(state.viewMode);
 
   // 목록 렌더링
-  renderGenerationSelectorOptions();
+  renderFilterSelectorsOptions();
   renderMembersGrid();
   renderFilterTags();
   
@@ -1622,24 +1691,67 @@ async function toggleAdminRole(memberId, makeAdmin) {
 
 // ==================== 데이터 렌더링 파트 ====================
 
-// 기수 필터 셀렉터 옵션 렌더링
-function renderGenerationSelectorOptions() {
-  const select = document.getElementById('generationFilter');
-  select.innerHTML = '<option value="">전체 기수</option>';
+// 기수, 전공, 학위과정 필터 셀렉터 옵션 렌더링
+function renderFilterSelectorsOptions() {
+  // 1. 기수 필터 셀렉터 옵션 렌더링
+  const genSelect = document.getElementById('generationFilter');
+  if (genSelect) {
+    genSelect.innerHTML = '<option value="">전체 기수</option>';
 
-  const gens = [...new Set(state.members
-    .filter(m => m.id !== 'admin' && m.generation)
-    .map(m => m.generation)
-  )].sort((a, b) => a - b);
+    const gens = [...new Set(state.members
+      .filter(m => m.id !== 'admin' && m.generation)
+      .map(m => m.generation)
+    )].sort((a, b) => a - b);
 
-  gens.forEach(gen => {
-    const opt = document.createElement('option');
-    opt.value = String(gen);
-    opt.innerText = `${gen}기`;
-    select.appendChild(opt);
-  });
+    gens.forEach(gen => {
+      const opt = document.createElement('option');
+      opt.value = String(gen);
+      opt.innerText = `${gen}기`;
+      genSelect.appendChild(opt);
+    });
 
-  select.value = state.selectedGeneration;
+    genSelect.value = state.selectedGeneration;
+  }
+
+  // 2. 소속 전공 필터 셀렉터 옵션 렌더링
+  const majorSelect = document.getElementById('majorFilter');
+  if (majorSelect) {
+    majorSelect.innerHTML = '<option value="">전체 전공</option>';
+
+    const majors = [...new Set(state.members
+      .filter(m => m.id !== 'admin' && m.classYear)
+      .map(m => m.classYear)
+    )].sort();
+
+    majors.forEach(major => {
+      const opt = document.createElement('option');
+      opt.value = major;
+      opt.innerText = major;
+      majorSelect.appendChild(opt);
+    });
+
+    majorSelect.value = state.selectedMajor;
+  }
+
+  // 3. 학위 과정 필터 셀렉터 옵션 렌더링
+  const degreeSelect = document.getElementById('degreeFilter');
+  if (degreeSelect) {
+    degreeSelect.innerHTML = '<option value="">전체 과정</option>';
+
+    const degrees = [...new Set(state.members
+      .filter(m => m.id !== 'admin' && m.degreeProcess)
+      .map(m => m.degreeProcess)
+    )].sort();
+
+    degrees.forEach(degree => {
+      const opt = document.createElement('option');
+      opt.value = degree;
+      opt.innerText = degree.endsWith("과정") ? degree : `${degree} 과정`;
+      degreeSelect.appendChild(opt);
+    });
+
+    degreeSelect.value = state.selectedDegree;
+  }
 }
 
 // 멤버 카드 그리드 렌더링
@@ -1671,12 +1783,22 @@ function renderMembersGrid() {
       !state.selectedGeneration || 
       String(member.generation) === state.selectedGeneration;
 
-    return matchesSearch && matchesTag && matchesGen;
+    // 4. 전공 필터링
+    const matchesMajor = 
+      !state.selectedMajor || 
+      member.classYear === state.selectedMajor;
+
+    // 5. 학위 과정 필터링
+    const matchesDegree = 
+      !state.selectedDegree || 
+      member.degreeProcess === state.selectedDegree;
+
+    return matchesSearch && matchesTag && matchesGen && matchesMajor && matchesDegree;
   });
 
   // 멤버 수 헤더 텍스트 갱신
   const countText = document.getElementById('memberCountText');
-  if (state.searchTerm || state.selectedTag || state.selectedGeneration) {
+  if (state.searchTerm || state.selectedTag || state.selectedGeneration || state.selectedMajor || state.selectedDegree) {
     countText.innerText = `검색/필터 결과 (${filtered.length}명)`;
   } else {
     countText.innerText = `전체 멤버 (${filtered.length}명)`;
@@ -2186,7 +2308,7 @@ async function saveProfileData(e) {
   updateUserInfoUI();
   renderMembersGrid();
   renderFilterTags();
-  renderGenerationSelectorOptions(); // 기수 목록 갱신
+  renderFilterSelectorsOptions(); // 필터 목록 갱신
   
   openProfileModal(member.id);
 }
@@ -2337,7 +2459,7 @@ async function handleAddMemberSubmit(e) {
 
   // 4. 모달 닫기 및 갱신
   closeAddMemberModal();
-  renderGenerationSelectorOptions();
+  renderFilterSelectorsOptions();
   renderMembersGrid();
   renderFilterTags();
   renderAdminDashboard();
@@ -2367,7 +2489,7 @@ async function handleDeleteMember(memberId, name) {
       }
     }
 
-    renderGenerationSelectorOptions();
+    renderFilterSelectorsOptions();
     renderMembersGrid();
     renderFilterTags();
     renderAdminDashboard();
@@ -3010,7 +3132,7 @@ async function submitExcelData() {
 
   // UI 상태 갱신
   closeExcelUploadModal();
-  renderGenerationSelectorOptions();
+  renderFilterSelectorsOptions();
   renderMembersGrid();
   renderFilterTags();
   renderAdminDashboard();

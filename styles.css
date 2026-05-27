@@ -3141,6 +3141,10 @@ a {
   background-color: #c6f6d5;
   color: #22543d;
 }
+.inquiry-status-badge.deleted {
+  background-color: #fed7d7;
+  color: #9b2c2c;
+}
 
 .inquiry-reply-box {
   background-color: #ebf8ff;
