@@ -3209,6 +3209,40 @@ a {
   box-shadow: 0 0 0 3px rgba(182, 0, 5, 0.12);
 }
 
+/* ==================== 멤버 상세 필터 프리미엄 스타일 ==================== */
+.filter-select-group {
+  margin-bottom: 0.75rem;
+}
+.filter-select-group:last-child {
+  margin-bottom: 0;
+}
+.filter-select-group label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.filter-select-group select {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-input);
+  color: var(--color-text-main);
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.filter-select-group select:focus {
+  border-color: var(--color-sogang);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(179, 8, 56, 0.1);
+}
+
 
 
 

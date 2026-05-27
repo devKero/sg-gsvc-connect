@@ -141,26 +141,26 @@
           </div>
 
           <!-- 멤버 상세 필터 패널 -->
-          <div class="sidebar-card filter-panel">
+          <div class="sidebar-card generation-filter-panel">
             <h4><i class="fa-solid fa-filter"></i> 멤버 상세 필터</h4>
             
-            <div class="form-group" style="margin-bottom: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;">
-              <label for="generationFilter" style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-sub);"><i class="fa-solid fa-graduation-cap"></i> 기수 분류</label>
-              <select id="generationFilter" class="select-generation" title="기수 필터 선택" style="width: 100%; cursor: pointer;">
+            <div class="filter-select-group">
+              <label for="generationFilter"><i class="fa-solid fa-graduation-cap"></i> 기수 분류</label>
+              <select id="generationFilter" class="select-generation" title="기수 필터 선택">
                 <option value="">전체 기수</option>
               </select>
             </div>
 
-            <div class="form-group" style="margin-bottom: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;">
-              <label for="majorFilter" style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-sub);"><i class="fa-solid fa-book"></i> 소속 전공</label>
-              <select id="majorFilter" title="전공 필터 선택" style="width: 100%; cursor: pointer;">
+            <div class="filter-select-group">
+              <label for="majorFilter"><i class="fa-solid fa-book"></i> 소속 전공</label>
+              <select id="majorFilter" title="전공 필터 선택">
                 <option value="">전체 전공</option>
               </select>
             </div>
 
-            <div class="form-group" style="margin-bottom: 0; display: flex; flex-direction: column; gap: 0.3rem;">
-              <label for="degreeFilter" style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-sub);"><i class="fa-solid fa-user-graduate"></i> 학위 과정</label>
-              <select id="degreeFilter" title="학위 과정 필터 선택" style="width: 100%; cursor: pointer;">
+            <div class="filter-select-group">
+              <label for="degreeFilter"><i class="fa-solid fa-user-graduate"></i> 학위 과정</label>
+              <select id="degreeFilter" title="학위 과정 필터 선택">
                 <option value="">전체 과정</option>
               </select>
             </div>

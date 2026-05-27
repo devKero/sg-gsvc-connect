@@ -1538,6 +1538,13 @@ function renderAdminDashboard() {
     return matchesSearch && matchesGen && matchesRole;
   });
 
+  // 학번 오름차순 정렬
+  filtered.sort((a, b) => {
+    const idA = (a.studentId || "").toLowerCase();
+    const idB = (b.studentId || "").toLowerCase();
+    return idA.localeCompare(idB);
+  });
+
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
@@ -1794,6 +1801,13 @@ function renderMembersGrid() {
       member.degreeProcess === state.selectedDegree;
 
     return matchesSearch && matchesTag && matchesGen && matchesMajor && matchesDegree;
+  });
+
+  // 학번 오름차순 정렬
+  filtered.sort((a, b) => {
+    const idA = (a.studentId || "").toLowerCase();
+    const idB = (b.studentId || "").toLowerCase();
+    return idA.localeCompare(idB);
   });
 
   // 멤버 수 헤더 텍스트 갱신
