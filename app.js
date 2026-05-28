@@ -5232,6 +5232,7 @@ function startDmPolling() {
 
 // 신규 쪽지 백그라운드 탐색 루틴 (15초마다 실행되어 안 읽은 쪽지 수와 쪽지함 UI를 동기화)
 async function pollNewMessages() {
+  if (document.hidden) return; // 사용자가 탭을 최소화하거나 다른 탭을 활성화한 경우 API 호출 차단 (서버 부하 및 트래픽 절약)
   if (!state.currentUser || state.currentUser.isGuest || !supabaseClient) return;
 
   try {
