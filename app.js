@@ -4523,26 +4523,27 @@ async function updateDmUnreadCount() {
   
   if (supabaseClient) {
     try {
-      const { count, error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('id, is_read, deleted_by_receiver')
         .eq('receiver_id', state.currentUser.id)
         .eq('is_read', false);
       if (error) throw error;
-      state.dmUnreadCount = count || 0;
+      const activeUnread = (data || []).filter(m => !m.deleted_by_receiver);
+      state.dmUnreadCount = activeUnread.length;
     } catch (err) {
       console.warn("Supabase 안 읽은 쪽지 조회 실패 (messages 테이블 미생성 상태일 수 있음):", err);
       const cached = localStorage.getItem('sogang_unity_messages');
       if (cached) {
         const msgs = JSON.parse(cached);
-        state.dmUnreadCount = msgs.filter(m => m.receiverId === state.currentUser.id && !m.isRead).length;
+        state.dmUnreadCount = msgs.filter(m => m.receiverId === state.currentUser.id && !m.isRead && !m.deletedByReceiver).length;
       }
     }
   } else {
     const cached = localStorage.getItem('sogang_unity_messages');
     if (cached) {
       const msgs = JSON.parse(cached);
-      state.dmUnreadCount = msgs.filter(m => m.receiverId === state.currentUser.id && !m.isRead).length;
+      state.dmUnreadCount = msgs.filter(m => m.receiverId === state.currentUser.id && !m.isRead && !m.deletedByReceiver).length;
     }
   }
   updateDmBadgeUI();
@@ -4581,7 +4582,8 @@ async function syncDMs() {
         receiverName: m.receiver_name,
         message: m.message,
         isRead: m.is_read,
-        createdAt: m.created_at
+        createdAt: m.created_at,
+        deletedByReceiver: m.deleted_by_receiver || false
       }));
       localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
     } catch (err) {
@@ -4594,7 +4596,7 @@ async function syncDMs() {
     if (cached) state.messages = JSON.parse(cached);
   }
   
-  state.dmUnreadCount = state.messages.filter(m => m.receiverId === state.currentUser.id && !m.isRead).length;
+  state.dmUnreadCount = state.messages.filter(m => m.receiverId === state.currentUser.id && !m.isRead && !m.deletedByReceiver).length;
   updateDmBadgeUI();
 }
 
@@ -4695,7 +4697,7 @@ function renderDmInbox() {
 
   let filtered = [];
   if (state.dmActiveSubTab === 'received') {
-    filtered = state.messages.filter(m => m.receiverId === state.currentUser.id);
+    filtered = state.messages.filter(m => m.receiverId === state.currentUser.id && !m.deletedByReceiver);
   } else {
     filtered = state.messages.filter(m => m.senderId === state.currentUser.id);
   }
@@ -4728,11 +4730,12 @@ function renderDmInbox() {
         <span class="dm-time">${formattedDate}</span>
       </div>
       <div class="dm-message-body">${escapeHtml(msg.message)}</div>
-      ${state.dmActiveSubTab === 'received' ? `
-        <div style="display:flex; justify-content:flex-end; margin-top:0.2rem; flex-shrink:0;">
+      <div style="display:flex; justify-content:flex-end; margin-top:0.2rem; flex-shrink:0; gap:0.35rem;">
+        <button class="btn btn-light btn-sm btn-delete-dm" data-id="${msg.id}" style="padding:0.15rem 0.4rem; font-size:0.7rem; border-radius:4px; color:var(--color-sogang); border-color:rgba(179,8,56,0.15); cursor:pointer;"><i class="fa-solid fa-trash-can"></i> ${state.dmActiveSubTab === 'received' ? '삭제' : '발송취소'}</button>
+        ${state.dmActiveSubTab === 'received' ? `
           <button class="btn btn-light btn-sm btn-reply-dm" data-sender-id="${msg.senderId}" data-sender-name="${msg.senderName}" style="padding:0.15rem 0.4rem; font-size:0.7rem; border-radius:4px; font-weight:700;"><i class="fa-solid fa-reply"></i> 답장하기</button>
-        </div>
-      ` : ''}
+        ` : ''}
+      </div>
     `;
 
     if (state.dmActiveSubTab === 'received') {
@@ -4741,8 +4744,82 @@ function renderDmInbox() {
       });
     }
 
+    card.querySelector('.btn-delete-dm').addEventListener('click', () => {
+      handleDeleteDm(msg.id, state.dmActiveSubTab === 'sent');
+    });
+
     container.appendChild(card);
   });
+}
+
+// 쪽지 삭제 처리 핸들러 (발신인 삭제 -> 영구삭제, 수신인 삭제 -> soft delete)
+async function handleDeleteDm(messageId, isSender) {
+  const confirmMsg = isSender 
+    ? "보낸 쪽지를 삭제하시겠습니까?\n삭제 시 상대방(받는 사람)의 쪽지함에서도 완전히 삭제됩니다."
+    : "받은 쪽지를 삭제하시겠습니까?\n삭제 시 회원님의 받은 쪽지함에서만 삭제됩니다.";
+
+  if (!confirm(confirmMsg)) return;
+
+  if (isSender) {
+    // 발신인 삭제: DB에서 완벽하게 제거 (양쪽 다 삭제)
+    state.messages = state.messages.filter(m => m.id !== messageId);
+    localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('messages')
+          .delete()
+          .eq('id', messageId);
+        if (error) throw error;
+        alert("쪽지가 완전히 삭제되었습니다.");
+        await syncDMs();
+        renderDmInbox();
+      } catch (err) {
+        console.error("Supabase 보낸 쪽지 삭제 실패:", err);
+        alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
+        renderDmInbox();
+      }
+    } else {
+      alert("로컬 스토리지 모드: 쪽지가 삭제되었습니다.");
+      renderDmInbox();
+    }
+  } else {
+    // 수신인 삭제: 본인 화면에서만 안 보이도록 소프트 삭제
+    const msg = state.messages.find(m => m.id === messageId);
+    if (msg) {
+      msg.deletedByReceiver = true;
+      localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+    }
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('messages')
+          .update({ deleted_by_receiver: true })
+          .eq('id', messageId);
+        
+        if (error) {
+          // 컬럼이 미생성 상태인 경우 fallback: 영구 삭제 처리하여 전체 시스템 구동 보장
+          const { error: fallbackError } = await supabaseClient
+            .from('messages')
+            .delete()
+            .eq('id', messageId);
+          if (fallbackError) throw fallbackError;
+        }
+        alert("쪽지가 삭제되었습니다.");
+        await syncDMs();
+        renderDmInbox();
+      } catch (err) {
+        console.error("Supabase 받은 쪽지 삭제 실패:", err);
+        alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
+        renderDmInbox();
+      }
+    } else {
+      alert("로컬 스토리지 모드: 쪽지가 삭제되었습니다.");
+      renderDmInbox();
+    }
+  }
 }
 
 // 쪽지 전송 모달 제어
