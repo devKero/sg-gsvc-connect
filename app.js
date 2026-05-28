@@ -4596,7 +4596,7 @@ function renderQuickLinks() {
   container.innerHTML = "";
   
   if (!state.quickLinks || state.quickLinks.length === 0) {
-    container.innerHTML = `<span style="font-size:0.75rem; color:var(--color-text-dim);">등록된 바로가기가 없습니다.</span>`;
+    container.innerHTML = `<div class="quick-link-empty"><i class="fa-solid fa-circle-info"></i> 등록된 바로가기가 없습니다.</div>`;
     return;
   }
   

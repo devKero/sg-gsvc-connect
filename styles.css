@@ -506,16 +506,23 @@ a {
 
 /* 기수 필터 및 태그 필터 패널 */
 .generation-filter-panel, 
-.tag-filter-panel {
+.tag-filter-panel,
+.quick-links-panel {
   padding: 1rem 1.2rem;
 }
 
 .generation-filter-panel h4,
-.tag-filter-panel h4 {
+.tag-filter-panel h4,
+.quick-links-panel h4 {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--color-text-main);
   margin-bottom: 0.6rem;
+}
+
+.quick-links-panel h4 i {
+  color: var(--color-sogang-gold);
+  margin-right: 0.3rem;
 }
 
 .select-generation {
@@ -1811,12 +1818,14 @@ a {
   }
 
   .generation-filter-panel,
-  .tag-filter-panel {
+  .tag-filter-panel,
+  .quick-links-panel {
     padding: 0.75rem 0.9rem;
   }
 
   .generation-filter-panel h4,
-  .tag-filter-panel h4 {
+  .tag-filter-panel h4,
+  .quick-links-panel h4 {
     font-size: 0.8rem;
     margin-bottom: 0.4rem;
   }
@@ -3244,6 +3253,13 @@ a {
 }
 
 /* ==================== 빠른 바로가기 (Quick Links) 스타일 ==================== */
+.quick-links-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
 .quick-link-chip {
   display: inline-flex;
   align-items: center;
@@ -3252,7 +3268,7 @@ a {
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--color-text-main);
-  background-color: var(--color-bg-light);
+  background-color: var(--color-bg-input);
   border: 1px solid var(--color-border);
   border-radius: 20px;
   text-decoration: none;
@@ -3271,6 +3287,26 @@ a {
 .quick-link-chip i {
   font-size: 0.8rem;
   color: var(--color-sogang-gold);
+}
+
+.quick-link-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.8rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  background-color: var(--color-bg-input);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.quick-link-empty i {
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
 }
 
 /* ==================== 쪽지함 (DM) 스타일 ==================== */
