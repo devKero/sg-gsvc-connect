@@ -884,6 +884,7 @@ function setupEventListeners() {
     sidebarEditBtn.addEventListener('click', () => {
       if (state.currentUser && !state.currentUser.isGuest) {
         openProfileModal(state.currentUser.id);
+        enableEditMode();
       }
     });
   }
