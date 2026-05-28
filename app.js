@@ -49,7 +49,9 @@ let state = {
   adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries', 'quick_links')
   adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
   adminMemberSubTab: 'active',  // 어드민 회원 하위 탭 ('active', 'trash')
-  editingLinkId: null          // 수정중인 퀵링크 ID
+  editingLinkId: null,          // 수정중인 퀵링크 ID
+  dmPollingInterval: null,      // DM 폴링 타이머
+  alertedMessageIds: null       // 이미 확인/알림 띄운 쪽지 ID 목록
 };
 
 const AVATAR_COLORS = [
@@ -439,7 +441,8 @@ async function syncWithSupabase() {
         academicStatus: m.academic_status || "재학",
         education: m.education || "",
         experience: m.experience || "",
-        role: m.role || "member"
+        role: m.role || "member",
+        deletedAt: m.deleted_at
       };
     });
     localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
@@ -466,7 +469,8 @@ async function syncWithSupabase() {
       reply: i.reply || "",
       repliedBy: i.replied_by || "", // 답변한 운영진 기록 필드 연동
       status: i.status || "pending",
-      createdAt: i.created_at
+      createdAt: i.created_at,
+      deletedAt: i.deleted_at
     }));
     localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
 
@@ -526,6 +530,72 @@ async function syncWithSupabase() {
   
   // 알림 갱신
   updateNotifications();
+
+  // 휴지통 자동 영구 삭제 실행 (30일 보관 기한 경과 항목)
+  autoPurgeTrash();
+}
+
+// 휴지통 자동 영구 삭제 처리 (30일 보관 기한 경과 항목)
+async function autoPurgeTrash() {
+  if (!supabaseClient) return; // Supabase 클라우드가 연동되었을 때만 실행
+
+  const purgeCutoff = new Date();
+  purgeCutoff.setDate(purgeCutoff.getDate() - 30);
+
+  // 1. 회원 정보 삭제
+  const deletedMembersToPurge = state.members.filter(m => {
+    if (m.role !== 'deleted') return false;
+    const deletedTime = m.deletedAt ? new Date(m.deletedAt) : (m.createdAt ? new Date(m.createdAt) : null);
+    return deletedTime && deletedTime < purgeCutoff;
+  });
+
+  let membersChanged = false;
+  for (const m of deletedMembersToPurge) {
+    console.log(`[Auto-Purge] 멤버 영구 삭제 진행: ${m.name} (${m.id})`);
+    try {
+      const { error } = await supabaseClient.from('members').delete().eq('id', m.id);
+      if (!error) {
+        state.members = state.members.filter(mem => mem.id !== m.id);
+        membersChanged = true;
+      }
+    } catch (err) {
+      console.error(`[Auto-Purge] 멤버 ${m.id} 삭제 실패:`, err);
+    }
+  }
+
+  if (membersChanged) {
+    localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+    renderFilterSelectorsOptions();
+    renderMembersGrid();
+    renderFilterTags();
+    if (state.isAdmin) renderAdminDashboard();
+  }
+
+  // 2. 문의사항 삭제
+  const deletedInqsToPurge = state.inquiries.filter(i => {
+    if (i.status !== 'deleted') return false;
+    const deletedTime = i.deletedAt ? new Date(i.deletedAt) : (i.createdAt ? new Date(i.createdAt) : null);
+    return deletedTime && deletedTime < purgeCutoff;
+  });
+
+  let inquiriesChanged = false;
+  for (const inq of deletedInqsToPurge) {
+    console.log(`[Auto-Purge] 문의사항 영구 삭제 진행: ${inq.title} (${inq.id})`);
+    try {
+      const { error } = await supabaseClient.from('inquiries').delete().eq('id', inq.id);
+      if (!error) {
+        state.inquiries = state.inquiries.filter(i => i.id !== inq.id);
+        inquiriesChanged = true;
+      }
+    } catch (err) {
+      console.error(`[Auto-Purge] 문의사항 ${inq.id} 삭제 실패:`, err);
+    }
+  }
+
+  if (inquiriesChanged) {
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+    if (state.isAdmin) renderAdminInquiries();
+  }
 }
 
 // 이미지 업로드 비동기 핸들러 (스토리지 및 오프라인 Base64 분기)
@@ -1448,6 +1518,13 @@ function handleLogout() {
   state.isSuperAdmin = false;
   state.activeMainTab = 'directory';
   
+  // DM 백그라운드 폴링 중단
+  if (state.dmPollingInterval) {
+    clearInterval(state.dmPollingInterval);
+    state.dmPollingInterval = null;
+  }
+  state.alertedMessageIds = null;
+
   // 알림 컨테이너 숨김
   updateNotifications();
   
@@ -1490,6 +1567,9 @@ function enterDashboard() {
   
   // 알림 상태 업데이트
   updateNotifications();
+
+  // 실시간 쪽지 폴링 시작
+  startDmPolling();
 }
 
 // 사용자 로그인 상태에 따른 UI 동기화
@@ -2712,13 +2792,14 @@ async function handleAddMemberSubmit(e) {
   alert(`${name} 님이 디렉토리의 ${generation}기 구성원으로 성공적으로 추가되었습니다.`);
 }
 
-// 멤버 삭제 처리 핸들러
 // 멤버 삭제 처리 핸들러 (Soft Delete: 휴지통 이동)
 async function handleDeleteMember(memberId, name) {
   if (confirm(`정말로 [${name}] 원우 정보를 휴지통으로 이동하시겠습니까?\n이동 시 일반 목록에서 제외되며 로그인이 차단됩니다.`)) {
     const member = state.members.find(m => m.id === memberId);
+    const nowIso = new Date().toISOString();
     if (member) {
       member.role = 'deleted';
+      member.deletedAt = nowIso;
       localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
     }
     
@@ -2728,10 +2809,16 @@ async function handleDeleteMember(memberId, name) {
       try {
         const { error } = await supabaseClient
           .from('members')
-          .update({ role: 'deleted' })
+          .update({ role: 'deleted', deleted_at: nowIso })
           .eq('id', memberId);
 
-        if (error) throw error;
+        if (error) {
+          const { error: retryError } = await supabaseClient
+            .from('members')
+            .update({ role: 'deleted' })
+            .eq('id', memberId);
+          if (retryError) throw retryError;
+        }
       } catch (err) {
         console.error("Supabase 멤버 휴지통 이동 에러:", err);
         alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
@@ -2753,6 +2840,7 @@ async function handleRestoreMember(memberId, name) {
     const member = state.members.find(m => m.id === memberId);
     if (member) {
       member.role = 'member'; // 복구 시 기본 member 권한 설정
+      member.deletedAt = null;
       localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
     }
     
@@ -2762,10 +2850,16 @@ async function handleRestoreMember(memberId, name) {
       try {
         const { error } = await supabaseClient
           .from('members')
-          .update({ role: 'member' })
+          .update({ role: 'member', deleted_at: null })
           .eq('id', memberId);
 
-        if (error) throw error;
+        if (error) {
+          const { error: retryError } = await supabaseClient
+            .from('members')
+            .update({ role: 'member' })
+            .eq('id', memberId);
+          if (retryError) throw retryError;
+        }
       } catch (err) {
         console.error("Supabase 멤버 복구 에러:", err);
         alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
@@ -3851,19 +3945,33 @@ function renderMyInquiries() {
   });
 }
 
-// 사용자 본인 문의 삭제 처리 핸들러 (답변 대기 상태)
+// 사용자 본인 문의 삭제 처리 핸들러 (답변 대기 상태 - Soft Delete: 휴지통 이동)
 async function handleUserDeleteInquiry(inquiryId) {
   if (confirm("정말로 이 문의사항을 삭제하시겠습니까?")) {
-    state.inquiries = state.inquiries.filter(i => i.id !== inquiryId);
-    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+    const inquiry = state.inquiries.find(i => i.id === inquiryId);
+    const nowIso = new Date().toISOString();
+    if (inquiry) {
+      inquiry.status = 'deleted';
+      inquiry.deleted_at = nowIso;
+      localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+    }
 
     if (supabaseClient) {
       try {
+        // Try with deleted_at column
         const { error } = await supabaseClient
           .from('inquiries')
-          .delete()
+          .update({ status: 'deleted', deleted_at: nowIso })
           .eq('id', inquiryId);
-        if (error) throw error;
+        
+        if (error) {
+          // Fallback retry if deleted_at column is missing
+          const { error: retryError } = await supabaseClient
+            .from('inquiries')
+            .update({ status: 'deleted' })
+            .eq('id', inquiryId);
+          if (retryError) throw retryError;
+        }
         alert("문의사항이 정상적으로 삭제되었습니다.");
       } catch (err) {
         console.error("Supabase 문의사항 삭제 에러:", err);
@@ -4076,32 +4184,74 @@ function switchAdminInquirySubTab(subTab) {
 // 어드민 문의 목록 렌더링
 function renderAdminInquiries() {
   const tbody = document.getElementById('adminInquiryTableBody');
-  const countEl = document.getElementById('adminInquiryCount');
-  if (countEl) {
-    countEl.innerText = String(state.inquiries.length);
-  }
+  
+  // 1. 활성/휴지통 필터링 및 카운팅
+  const activeInquiries = state.inquiries.filter(i => i.status !== 'deleted');
+  const trashInquiries = state.inquiries.filter(i => i.status === 'deleted');
+
+  const mainCountEl = document.getElementById('adminInquiryCount');
+  const activeCountEl = document.getElementById('adminActiveInqCount');
+  const trashCountEl = document.getElementById('adminTrashInqCount');
+
+  if (mainCountEl) mainCountEl.innerText = String(activeInquiries.length);
+  if (activeCountEl) activeCountEl.innerText = String(activeInquiries.length);
+  if (trashCountEl) trashCountEl.innerText = String(trashInquiries.length);
 
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  if (state.inquiries.length === 0) {
+  // 현재 서브탭에 따라 렌더링 소스 결정
+  const listToRender = (state.adminInquirySubTab === 'trash') ? trashInquiries : activeInquiries;
+
+  if (listToRender.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="7" style="text-align: center; color: var(--color-text-dim); padding: 3rem;">
           <i class="fa-regular fa-envelope-open" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>
-          접수된 건의 및 문의사항이 없습니다.
+          ${state.adminInquirySubTab === 'trash' ? '휴지통이 비어 있습니다.' : '접수된 건의 및 문의사항이 없습니다.'}
         </td>
       </tr>
     `;
     return;
   }
 
-  state.inquiries.forEach(inq => {
+  listToRender.forEach(inq => {
     const tr = document.createElement('tr');
 
     const formattedDate = inq.createdAt ? inq.createdAt.substring(0, 16).replace('T', ' ') : '-';
-    const statusText = inq.status === 'resolved' ? '답변 완료' : '접수 대기';
-    const statusClass = inq.status === 'resolved' ? 'resolved' : 'pending';
+    
+    let statusText = '';
+    let statusClass = '';
+    if (inq.status === 'deleted') {
+      statusText = '삭제됨';
+      statusClass = 'deleted';
+    } else if (inq.status === 'resolved') {
+      statusText = '답변 완료';
+      statusClass = 'resolved';
+    } else {
+      statusText = '접수 대기';
+      statusClass = 'pending';
+    }
+
+    let actionButtonHtml = "";
+    if (state.adminInquirySubTab === 'trash') {
+      actionButtonHtml = `
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-light btn-sm admin-restore-inq-btn" data-id="${inq.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang-gold); border-color: rgba(197,160,89,0.3);">
+            <i class="fa-solid fa-rotate-left"></i> 복구
+          </button>
+          <button class="btn btn-light btn-sm admin-delete-permanent-inq-btn" data-id="${inq.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
+            <i class="fa-solid fa-trash-can"></i> 영구삭제
+          </button>
+        </div>
+      `;
+    } else {
+      actionButtonHtml = `
+        <button class="btn btn-light btn-sm btn-open-inquiry" data-id="${inq.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; font-weight: 700;">
+          <i class="fa-solid fa-file-signature"></i> 상세/답변
+        </button>
+      `;
+    }
 
     tr.innerHTML = `
       <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(inq.author)}</td>
@@ -4110,17 +4260,22 @@ function renderAdminInquiries() {
       <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${escapeHtml(inq.message)}</td>
       <td style="font-size: 0.72rem; color: var(--color-text-dim);">${formattedDate}</td>
       <td><span class="inquiry-status-badge ${statusClass}">${statusText}</span></td>
-      <td>
-        <button class="btn btn-light btn-sm btn-open-inquiry" data-id="${inq.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; font-weight: 700;">
-          <i class="fa-solid fa-file-signature"></i> 상세/답변
-        </button>
-      </td>
+      <td>${actionButtonHtml}</td>
     `;
 
-    // 상세 모달 열기 바인딩
-    tr.querySelector('.btn-open-inquiry').addEventListener('click', () => {
-      openAdminInquiryModal(inq.id);
-    });
+    // 이벤트 리스너 바인딩
+    if (state.adminInquirySubTab === 'trash') {
+      tr.querySelector('.admin-restore-inq-btn').addEventListener('click', () => {
+        handleRestoreInquiry(inq.id);
+      });
+      tr.querySelector('.admin-delete-permanent-inq-btn').addEventListener('click', () => {
+        deleteInquiry(inq.id);
+      });
+    } else {
+      tr.querySelector('.btn-open-inquiry').addEventListener('click', () => {
+        openAdminInquiryModal(inq.id);
+      });
+    }
 
     tbody.appendChild(tr);
   });
@@ -4238,35 +4393,118 @@ async function submitAdminReply(inquiryId, replyText, repliedBy) {
   }
 }
 
-// 접수된 문의 삭제
+// 접수된 문의 삭제 (Soft Delete: 휴지통 이동 또는 Trash 탭 내 영구 삭제)
 async function deleteInquiry(inquiryId) {
-  const confirmed = confirm("이 문의 건을 완전히 삭제하시겠습니까?\n삭제된 문의는 복원할 수 없습니다.");
-  if (!confirmed) return;
+  const inquiry = state.inquiries.find(i => i.id === inquiryId);
+  if (!inquiry) return;
 
-  state.inquiries = state.inquiries.filter(i => i.id !== inquiryId);
-  localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+  if (inquiry.status !== 'deleted') {
+    // Soft Delete (move to trash)
+    if (!confirm("이 문의 건을 휴지통으로 이동하시겠습니까?")) return;
 
-  if (supabaseClient) {
-    try {
-      const { error } = await supabaseClient
-        .from('inquiries')
-        .delete()
-        .eq('id', inquiryId);
-      if (error) throw error;
-      alert("문의 내역이 완전히 삭제되었습니다.");
-      closeAdminInquiryModal();
-      await syncWithSupabase();
-      renderAdminInquiries();
-    } catch (err) {
-      console.error("Supabase 문의 삭제 실패:", err);
-      alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
+    const nowIso = new Date().toISOString();
+    inquiry.status = 'deleted';
+    inquiry.deleted_at = nowIso;
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('inquiries')
+          .update({ status: 'deleted', deleted_at: nowIso })
+          .eq('id', inquiryId);
+        
+        if (error) {
+          const { error: retryError } = await supabaseClient
+            .from('inquiries')
+            .update({ status: 'deleted' })
+            .eq('id', inquiryId);
+          if (retryError) throw retryError;
+        }
+        alert("문의 건이 휴지통으로 이동되었습니다.");
+        closeAdminInquiryModal();
+        await syncWithSupabase();
+        renderAdminInquiries();
+      } catch (err) {
+        console.error("Supabase 문의 휴지통 이동 실패:", err);
+        alert("서버 전송 실패로 로컬에서만 처리되었습니다.");
+        closeAdminInquiryModal();
+        renderAdminInquiries();
+      }
+    } else {
+      alert("로컬 스토리지 모드: 문의 건이 휴지통으로 이동되었습니다.");
       closeAdminInquiryModal();
       renderAdminInquiries();
     }
   } else {
-    alert("로컬 스토리지 모드: 문의가 삭제되었습니다.");
-    closeAdminInquiryModal();
-    renderAdminInquiries();
+    // Permanent Delete
+    if (!confirm("이 문의 건을 완전히 영구 삭제하시겠습니까?\n삭제된 문의는 복원할 수 없습니다.")) return;
+
+    state.inquiries = state.inquiries.filter(i => i.id !== inquiryId);
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('inquiries')
+          .delete()
+          .eq('id', inquiryId);
+        if (error) throw error;
+        alert("문의 내역이 완전히 삭제되었습니다.");
+        closeAdminInquiryModal();
+        await syncWithSupabase();
+        renderAdminInquiries();
+      } catch (err) {
+        console.error("Supabase 문의 영구 삭제 실패:", err);
+        alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
+        closeAdminInquiryModal();
+        renderAdminInquiries();
+      }
+    } else {
+      alert("로컬 스토리지 모드: 문의가 영구 삭제되었습니다.");
+      closeAdminInquiryModal();
+      renderAdminInquiries();
+    }
+  }
+}
+
+// 문의 복구 처리 핸들러
+async function handleRestoreInquiry(inquiryId) {
+  const inquiry = state.inquiries.find(i => i.id === inquiryId);
+  if (!inquiry) return;
+
+  if (confirm("이 문의 건을 일반 문의 목록으로 복구하시겠습니까?")) {
+    const newStatus = inquiry.reply ? 'resolved' : 'pending';
+    inquiry.status = newStatus;
+    inquiry.deleted_at = null;
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('inquiries')
+          .update({ status: newStatus, deleted_at: null })
+          .eq('id', inquiryId);
+        
+        if (error) {
+          const { error: retryError } = await supabaseClient
+            .from('inquiries')
+            .update({ status: newStatus })
+            .eq('id', inquiryId);
+          if (retryError) throw retryError;
+        }
+        alert("문의 건이 복구되었습니다.");
+        await syncWithSupabase();
+        renderAdminInquiries();
+      } catch (err) {
+        console.error("Supabase 문의 복구 실패:", err);
+        alert("서버 전송 실패로 로컬에서만 복구되었습니다.");
+        renderAdminInquiries();
+      }
+    } else {
+      alert("로컬 스토리지 모드: 문의 건이 복구되었습니다.");
+      renderAdminInquiries();
+    }
   }
 }
 
@@ -4967,5 +5205,144 @@ async function handleDeleteQuickLink(linkId, title) {
     
     renderQuickLinks();
     renderAdminQuickLinks();
+  }
+}
+
+// ==================== 실시간 쪽지 알림(Toast) 및 백그라운드 폴링 기능 ====================
+
+// 토스트 컨테이너 생성 및 가져오기
+function getToastContainer() {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+  return container;
+}
+
+// 실시간 알림 토스트 출력
+function showToast(title, message, onClick) {
+  const container = getToastContainer();
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  
+  toast.innerHTML = `
+    <div class="toast-icon">
+      <i class="fa-solid fa-comment-dots"></i>
+    </div>
+    <div class="toast-content">
+      <div class="toast-title">${escapeHtml(title)}</div>
+      <div class="toast-message">${escapeHtml(message)}</div>
+    </div>
+    <button class="toast-close-btn" aria-label="닫기">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  `;
+  
+  const contentEl = toast.querySelector('.toast-content');
+  if (onClick) {
+    contentEl.addEventListener('click', () => {
+      onClick();
+      toast.classList.remove('show');
+      toast.classList.add('hide');
+      setTimeout(() => toast.remove(), 400);
+    });
+  }
+  
+  const closeBtn = toast.querySelector('.toast-close-btn');
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 400);
+  });
+  
+  container.appendChild(toast);
+  
+  // 애니메이션 효과 트리거
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 50);
+  
+  // 5초 후 자동 닫기
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.remove('show');
+      toast.classList.add('hide');
+      setTimeout(() => toast.remove(), 400);
+    }
+  }, 5000);
+}
+
+// 실시간 쪽지 폴링 시작
+function startDmPolling() {
+  // 중복 폴링 등록 방지
+  if (state.dmPollingInterval) {
+    clearInterval(state.dmPollingInterval);
+  }
+
+  // 로그인 상태가 아닌 경우에는 생략
+  if (!state.currentUser || state.currentUser.isGuest) return;
+
+  // 진입 시 즉시 1회 체크
+  pollNewMessages();
+
+  // 15초 주기로 체크 실행
+  state.dmPollingInterval = setInterval(pollNewMessages, 15000);
+}
+
+// 신규 쪽지 백그라운드 탐색 루틴
+async function pollNewMessages() {
+  if (!state.currentUser || state.currentUser.isGuest || !supabaseClient) return;
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('messages')
+      .select('id, sender_name, message, is_read, created_at')
+      .eq('receiver_id', state.currentUser.id)
+      .eq('is_read', false)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+
+    const currentUnreadList = data || [];
+
+    // 만약 최초 로드 시점이라면 알림 띄우지 않고 알려진 ID 목록으로 초기 등록
+    if (state.alertedMessageIds === null) {
+      state.alertedMessageIds = new Set(currentUnreadList.map(m => m.id));
+      return;
+    }
+
+    // 이미 알린 적이 없는 새로운 안 읽은 쪽지 탐색
+    const newUnreadMessages = currentUnreadList.filter(m => !state.alertedMessageIds.has(m.id));
+
+    if (newUnreadMessages.length > 0) {
+      // 1. 알려진 메시지 목록 업데이트
+      newUnreadMessages.forEach(m => state.alertedMessageIds.add(m.id));
+
+      // 2. 가장 최신 쪽지 기준 알림 토스트 출력
+      const latestMsg = newUnreadMessages[0];
+      const toastTitle = `${latestMsg.sender_name} 님으로부터 새 쪽지가 도착했습니다!`;
+      const toastMsg = latestMsg.message;
+      
+      showToast(toastTitle, toastMsg, () => {
+        // 토스트 클릭 시 쪽지함 모달 열림 연동
+        const inboxBtn = document.getElementById('btnDirectMessageInbox');
+        if (inboxBtn) inboxBtn.click();
+      });
+
+      // 3. 만약 쪽지함 모달이 열려 있다면 즉시 화면 동기화
+      const dmModal = document.getElementById('dmInboxModal');
+      if (dmModal && !dmModal.classList.contains('hidden')) {
+        await syncDMs();
+        renderDmInbox();
+      } else {
+        // 쪽지함이 닫혀 있으면 뱃지 개수만 갱신
+        await updateDmUnreadCount();
+      }
+    }
+  } catch (err) {
+    console.error("신규 쪽지 폴링 실패:", err);
   }
 }
