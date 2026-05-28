@@ -1518,10 +1518,16 @@ a {
     gap: 1rem;
   }
 
+  /* 사이드바 카드가 4개이므로 2열 그리드 유지 (첫 번째 카드는 full-width) */
   .sidebar {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
+  }
+
+  /* 미니프로필 카드는 항상 전체 너비 */
+  .sidebar .user-mini-card {
+    grid-column: 1 / -1;
   }
 
   .user-mini-card .mini-card-banner {
@@ -1562,7 +1568,7 @@ a {
   .navbar-right {
     flex: 1 1 0%;
     justify-content: flex-end;
-    gap: 0.6rem;
+    gap: 0.4rem; /* 아이콘 5개를 위해 간격 축소 */
   }
 
   .nav-title {
@@ -1571,8 +1577,8 @@ a {
 
   /* 네비바 버튼 아이콘 전용 모드 */
   .nav-tab-btn {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.82rem;
     gap: 0;
   }
 
@@ -1582,6 +1588,11 @@ a {
 
   .user-name {
     display: none; /* 아바타만 표시 */
+  }
+
+  /* 로그아웃 버튼 아이콘 전용 */
+  .btn-logout {
+    padding: 0.35rem 0.4rem;
   }
 
   .search-box input {
@@ -1871,9 +1882,9 @@ a {
 
   .grid-view .member-card {
     min-height: auto;
-    text-align: left;
     padding: 0;
     overflow: hidden;
+    /* 텍스트 정렬은 center 유지 (아바타/이름 중앙 디자인 유지) */
   }
 
   .grid-view .card-avatar {
@@ -1902,6 +1913,7 @@ a {
 
   .grid-view .card-class {
     font-size: 0.68rem;
+    text-align: center;
   }
 
   .grid-view .card-headline {
@@ -1913,6 +1925,7 @@ a {
   }
 
   .grid-view .card-tags {
+    justify-content: center; /* center 유지 */
     margin-top: 0.25rem;
     gap: 0.15rem;
   }
@@ -2033,14 +2046,26 @@ a {
     padding: 0.25rem 0.6rem;
   }
 
-  /* 모달 내 방명록 폼 */
+  /* 모달 내 방명록 폼 — inline style 충돌 방지를 위해 !important 적용 */
   .modal-guestbook-form-box {
     padding: 0.6rem !important;
   }
 
-  .modal-guestbook-form-box .form-row {
+  /* inline style="grid-template-columns: 1fr 120px" 을 !important로 덮어씀 */
+  #modalCommentForm .form-row {
     grid-template-columns: 1fr !important;
     gap: 0.4rem !important;
+  }
+
+  /* 방명록 전송 버튼 — textarea 옆에 있는 div도 세로 배치 */
+  #modalCommentForm > div:last-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  #modalCommentForm > div:last-child button {
+    width: 100% !important;
+    height: auto !important;
   }
 
   /* 편집 모달 */
@@ -2163,17 +2188,53 @@ a {
 
   /* 관리자 탭 메뉴 */
   .admin-tab-menu {
-    gap: 0.5rem !important;
+    gap: 0.3rem !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
   }
 
   .admin-tab-menu button {
-    font-size: 0.78rem !important;
-    padding: 0.4rem 0.6rem !important;
+    font-size: 0.75rem !important;
+    padding: 0.4rem 0.5rem !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* 관리자 서브 탭 메뉴 */
+  .admin-sub-tab-menu {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.75rem !important;
+    gap: 0.3rem !important;
+  }
+
+  .admin-sub-tab-menu button {
+    font-size: 0.75rem !important;
+    padding: 0.35rem 0.5rem !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* 관리자 빠른링크 추가 폼 모바일 세로 배치 */
+  #adminAddQuickLinkForm {
+    flex-direction: column !important;
+  }
+
+  #adminAddQuickLinkForm .form-group {
+    min-width: unset !important;
+    width: 100% !important;
   }
 
   /* 엑셀 업로드 모달 */
   .excel-dropzone {
     padding: 1.5rem 1rem !important;
+  }
+
+  /* 쪽지함 DM 모달 내부 탭 영역 */
+  #dmInboxModal .modal-content,
+  #dmSendModal .modal-content {
+    padding: 0.75rem !important;
   }
 
   /* ---- 알림 팝오버 ---- */
