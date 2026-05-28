@@ -959,11 +959,17 @@
         </h2>
         
         <form id="dmSendForm" style="display: flex; flex-direction: column; gap: 0.8rem;">
-          <div class="form-group">
-            <label for="dmReceiverSelect">받는 사람</label>
-            <select id="dmReceiverSelect" required style="width: 100%; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--color-border); cursor: pointer;">
-              <!-- 활성 회원 목록이 동적으로 들어갑니다 -->
-            </select>
+          <div class="form-group" style="position: relative;">
+            <label for="dmReceiverSearchInput">받는 사람</label>
+            <div class="searchable-select-container" style="position: relative;">
+              <input type="text" id="dmReceiverSearchInput" placeholder="이름 또는 학번 검색..." required autocomplete="off" style="width: 100%; padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--color-border); background-color: var(--color-bg-card); font-family: var(--font-body);">
+              <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--color-text-dim); pointer-events: none;"></i>
+              <input type="hidden" id="dmReceiverSelect" required>
+            </div>
+            <!-- 검색 결과 리스트 레이어 -->
+            <div id="dmReceiverDropdownList" class="searchable-dropdown-list hidden">
+              <!-- 검색 결과 항목들이 동적으로 추가됩니다 -->
+            </div>
           </div>
           
           <div class="form-group">

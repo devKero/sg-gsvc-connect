@@ -3382,10 +3382,46 @@ a {
 .dm-empty-state i {
   font-size: 2.2rem;
   color: var(--color-border);
+}/* ==================== 드롭다운 검색 필터 스타일 ==================== */
+.searchable-dropdown-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  margin-top: 0.25rem;
 }
 
+.searchable-dropdown-item {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+  color: var(--color-text-main);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
+.searchable-dropdown-item:hover {
+  background-color: var(--color-bg-base);
+  color: var(--color-sogang);
+}
 
+.searchable-dropdown-item.selected {
+  background-color: var(--color-sogang-glow);
+  color: var(--color-sogang);
+  font-weight: 700;
+}
 
-
+.searchable-dropdown-item .item-sub {
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+}
 

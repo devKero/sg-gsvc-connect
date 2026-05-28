@@ -1263,6 +1263,38 @@ function setupEventListeners() {
   if (btnCancelSendDm) {
     btnCancelSendDm.addEventListener('click', closeDmSendModal);
   }
+
+  // 쪽지 받는 사람 검색형 자동완성 드롭다운 이벤트 바인딩
+  const dmReceiverSearchInput = document.getElementById('dmReceiverSearchInput');
+  const dmReceiverDropdownList = document.getElementById('dmReceiverDropdownList');
+  if (dmReceiverSearchInput && dmReceiverDropdownList) {
+    dmReceiverSearchInput.addEventListener('focus', () => {
+      renderReceiverDropdown(dmReceiverSearchInput.value);
+      dmReceiverDropdownList.classList.remove('hidden');
+    });
+    
+    dmReceiverSearchInput.addEventListener('input', (e) => {
+      const currentVal = e.target.value;
+      const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted');
+      const exactMatch = activeMembers.find(m => `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${m.studentId})` === currentVal);
+      if (exactMatch) {
+        document.getElementById('dmReceiverSelect').value = exactMatch.id;
+      } else {
+        document.getElementById('dmReceiverSelect').value = "";
+      }
+      renderReceiverDropdown(currentVal);
+      dmReceiverDropdownList.classList.remove('hidden');
+    });
+    
+    dmReceiverSearchInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        dmReceiverDropdownList.classList.add('hidden');
+        if (dmReceiverSearchInput.value.trim() === "") {
+          document.getElementById('dmReceiverSelect').value = "";
+        }
+      }, 200);
+    });
+  }
   // 쪽지 보내기 서브밋
   const dmSendForm = document.getElementById('dmSendForm');
   if (dmSendForm) {
@@ -4482,32 +4514,81 @@ function openDmSendModal(receiverId = "", receiverName = "") {
   if (!modal) return;
   modal.classList.remove('hidden');
   
-  const select = document.getElementById('dmReceiverSelect');
-  if (select) {
-    select.innerHTML = "";
-    
-    const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted');
-    
-    activeMembers.sort((a, b) => {
-      const genA = a.generation || 999;
-      const genB = b.generation || 999;
-      if (genA !== genB) return genA - genB;
-      return a.name.localeCompare(b.name);
-    });
-    
-    activeMembers.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.innerText = `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${escapeHtml(m.studentId)})`;
-      select.appendChild(opt);
-    });
-    
+  const hiddenInput = document.getElementById('dmReceiverSelect');
+  const searchInput = document.getElementById('dmReceiverSearchInput');
+  const dropdownList = document.getElementById('dmReceiverDropdownList');
+  
+  if (hiddenInput && searchInput) {
     if (receiverId) {
-      select.value = receiverId;
+      hiddenInput.value = receiverId;
+      let nameToUse = receiverName;
+      const m = state.members.find(member => member.id === receiverId);
+      if (m) {
+        nameToUse = `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${m.studentId})`;
+      }
+      searchInput.value = nameToUse || "";
+    } else {
+      hiddenInput.value = "";
+      searchInput.value = "";
+    }
+    if (dropdownList) {
+      dropdownList.classList.add('hidden');
     }
   }
   
   document.getElementById('dmMessageText').value = "";
+}
+
+// 받는 사람 드롭다운 렌더링
+function renderReceiverDropdown(filterText = "") {
+  const listContainer = document.getElementById('dmReceiverDropdownList');
+  if (!listContainer) return;
+  listContainer.innerHTML = "";
+
+  const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted');
+  activeMembers.sort((a, b) => {
+    const genA = a.generation || 999;
+    const genB = b.generation || 999;
+    if (genA !== genB) return genA - genB;
+    return a.name.localeCompare(b.name);
+  });
+
+  const query = filterText.trim().toLowerCase();
+  const filtered = activeMembers.filter(m => {
+    const label = `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${m.studentId})`.toLowerCase();
+    return label.includes(query);
+  });
+
+  if (filtered.length === 0) {
+    const emptyEl = document.createElement('div');
+    emptyEl.style.padding = '0.5rem 0.75rem';
+    emptyEl.style.fontSize = '0.8rem';
+    emptyEl.style.color = 'var(--color-text-dim)';
+    emptyEl.innerText = '검색 결과가 없습니다.';
+    listContainer.appendChild(emptyEl);
+    return;
+  }
+
+  filtered.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'searchable-dropdown-item';
+    const text = `${m.generation ? `${m.generation}기 ` : ''}${m.name}`;
+    const subText = `(${escapeHtml(m.studentId)})`;
+    item.innerHTML = `<span>${text}</span><span class="item-sub">${subText}</span>`;
+    
+    const currentSelected = document.getElementById('dmReceiverSelect').value;
+    if (m.id === currentSelected) {
+      item.classList.add('selected');
+    }
+
+    item.addEventListener('click', () => {
+      document.getElementById('dmReceiverSelect').value = m.id;
+      document.getElementById('dmReceiverSearchInput').value = `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${m.studentId})`;
+      listContainer.classList.add('hidden');
+    });
+
+    listContainer.appendChild(item);
+  });
 }
 
 function closeDmSendModal() {
