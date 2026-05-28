@@ -47,6 +47,7 @@ let state = {
   dmUnreadCount: 0,        // 안 읽은 쪽지 개수
   dmActiveSubTab: 'received', // 쪽지함 하위 탭 ('received', 'sent')
   activeDmOpponentId: "",      // 활성화된 1:1 대화방 상대 ID
+  leftChats: {},               // 대화방 나간 시점 기록 { opponentId: leftAtIsoString }
   adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries', 'quick_links')
   adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
   adminMemberSubTab: 'active',  // 어드민 회원 하위 탭 ('active', 'trash')
@@ -1350,6 +1351,12 @@ function setupEventListeners() {
       syncDMs().then(renderDmInbox);
     });
   }
+
+  // 대화방 나가기 버튼 클릭
+  const btnDmLeaveChat = document.getElementById('btnDmLeaveChat');
+  if (btnDmLeaveChat) {
+    btnDmLeaveChat.addEventListener('click', handleLeaveChat);
+  }
   // 쪽지 작성 모달 닫기
   const closeDmSendModalBtn = document.getElementById('closeDmSendModalBtn');
   if (closeDmSendModalBtn) {
@@ -1607,6 +1614,15 @@ function enterDashboard() {
 // 사용자 로그인 상태에 따른 UI 동기화
 function updateUserInfoUI() {
   const user = state.currentUser;
+  
+  // 나간 대화방 기록 로드
+  if (user && !user.isGuest) {
+    const cachedLeft = localStorage.getItem('sogang_unity_left_chats_' + user.id);
+    state.leftChats = cachedLeft ? JSON.parse(cachedLeft) : {};
+  } else {
+    state.leftChats = {};
+  }
+  
   const matchedMember = state.members.find(m => m.id === user.id);
   const userAvatarImg = matchedMember ? matchedMember.avatarImage : null;
   
@@ -4753,10 +4769,15 @@ function renderDmThreadList() {
   if (!container) return;
   container.innerHTML = "";
 
-  // 유효한 메시지 필터링 (나에게 왔고 내가 지운 쪽지는 제외)
+  // 유효한 메시지 필터링 (나에게 왔고 내가 지운 쪽지 & 대화방 나가기 시점 이전의 메시지 제외)
   const validMessages = state.messages.filter(m => {
     const isReceiver = m.receiverId === state.currentUser.id;
     if (isReceiver && m.deletedByReceiver) return false;
+
+    const opponentId = m.senderId === state.currentUser.id ? m.receiverId : m.senderId;
+    const leftAt = state.leftChats[opponentId];
+    if (leftAt && new Date(m.createdAt) <= new Date(leftAt)) return false;
+
     return true;
   });
 
@@ -4857,6 +4878,10 @@ function renderDmChatThread(opponentId, forceScroll = false) {
                          (m.senderId === state.currentUser.id && m.receiverId === opponentId);
       if (!isOpponent) return false;
       if (m.receiverId === state.currentUser.id && m.deletedByReceiver) return false;
+      
+      const leftAt = state.leftChats[opponentId];
+      if (leftAt && new Date(m.createdAt) <= new Date(leftAt)) return false;
+      
       return true;
     })
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -5017,6 +5042,32 @@ async function handleSendDmReply() {
   } else {
     renderDmInbox();
   }
+}
+
+// 대화방 나가기 처리 핸들러 (나간 시점을 로컬에 저장하여 이전 내역 숨김)
+async function handleLeaveChat() {
+  if (!state.currentUser || state.currentUser.isGuest) return;
+  if (!state.activeDmOpponentId) return;
+
+  const opponentId = state.activeDmOpponentId;
+  const partner = state.members.find(m => m.id === opponentId);
+  const partnerName = partner ? partner.name : (opponentId === 'admin' ? '운영진' : '알 수 없는 원우');
+
+  const confirmMsg = `[${partnerName}] 원우님과의 대화방을 나가시겠습니까?\n나가기 시 이전 대화 내역이 모두 삭제(숨김)되며, 상대방이 새 쪽지를 보내면 대화가 다시 시작됩니다.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  // 1. 해당 상대가 보낸 쪽지 모두 읽음 처리
+  await markMessagesAsReadForOpponent(opponentId);
+
+  // 2. 나간 시간 기록 및 저장
+  const nowIso = new Date().toISOString();
+  state.leftChats[opponentId] = nowIso;
+  localStorage.setItem('sogang_unity_left_chats_' + state.currentUser.id, JSON.stringify(state.leftChats));
+
+  // 3. 상태 리셋 및 돌아가기
+  state.activeDmOpponentId = "";
+  renderDmInbox();
 }
 
 // 쪽지 삭제 처리 핸들러 (발신인 삭제 -> 영구삭제, 수신인 삭제 -> soft delete)
