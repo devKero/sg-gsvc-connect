@@ -36,6 +36,11 @@
   padding: 0;
 }
 
+/* 가로 스크롤 원천 차단 */
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-body);
   background-color: var(--color-bg-base);
@@ -43,6 +48,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden; /* 모바일 가로 스크롤 방지 */
+  max-width: 100vw;
 }
 
 a {
@@ -261,6 +268,8 @@ a {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  max-width: 100%; /* 가로 스크롤 방지 */
+  overflow-x: hidden;
 }
 
 /* 상단 네비게이션 바 */
@@ -268,7 +277,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 2rem;
+  padding: 0.5rem 1.25rem; /* 2rem → 1.25rem으로 충소 (모바일 오버플로우 방지) */
   background: linear-gradient(135deg, var(--color-sogang) 0%, #8a0003 100%);
   border-bottom: 2px solid var(--color-sogang-gold);
   position: sticky;
@@ -409,6 +418,7 @@ a {
   width: 100%;
   margin: 1.25rem auto;
   padding: 0 1rem;
+  box-sizing: border-box; /* 패딩이 너비에 포함되도록 */
 }
 
 /* 사이드바 스타일 */
@@ -2568,7 +2578,7 @@ a {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.85rem;
-  width: 240px;
+  width: min(240px, 100%); /* 좁은 화면에서 100% 이하로 제한 */
   transition: var(--transition);
 }
 
@@ -3063,7 +3073,7 @@ a {
   position: absolute;
   top: 45px;
   right: -50px;
-  width: 320px;
+  width: min(320px, calc(100vw - 1rem)); /* 뷰포트 너비를 초과하지 않도록 제한 */
   background-color: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
