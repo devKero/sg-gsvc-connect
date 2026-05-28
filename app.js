@@ -530,14 +530,11 @@ async function syncWithSupabase() {
   
   // 알림 갱신
   updateNotifications();
-
-  // 휴지통 자동 영구 삭제 실행 (30일 보관 기한 경과 항목)
-  autoPurgeTrash();
 }
 
-// 휴지통 자동 영구 삭제 처리 (30일 보관 기한 경과 항목)
+// 휴지통 자동 영구 삭제 처리 (30일 보관 기한 경과 항목 - 어드민 로그인 시 실행)
 async function autoPurgeTrash() {
-  if (!supabaseClient) return; // Supabase 클라우드가 연동되었을 때만 실행
+  if (!supabaseClient || !state.isAdmin) return; // 어드민 권한 및 클라우드 연동 상태에서만 자동 삭제 실행
 
   const purgeCutoff = new Date();
   purgeCutoff.setDate(purgeCutoff.getDate() - 30);
@@ -1567,6 +1564,11 @@ function enterDashboard() {
   
   // 알림 상태 업데이트
   updateNotifications();
+
+  // 어드민 대시보드 진입 시 휴지통 자동 영구 삭제 실행
+  if (state.isAdmin) {
+    autoPurgeTrash();
+  }
 
   // 실시간 쪽지 폴링 시작
   startDmPolling();
@@ -5208,72 +5210,7 @@ async function handleDeleteQuickLink(linkId, title) {
   }
 }
 
-// ==================== 실시간 쪽지 알림(Toast) 및 백그라운드 폴링 기능 ====================
-
-// 토스트 컨테이너 생성 및 가져오기
-function getToastContainer() {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    document.body.appendChild(container);
-  }
-  return container;
-}
-
-// 실시간 알림 토스트 출력
-function showToast(title, message, onClick) {
-  const container = getToastContainer();
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  
-  toast.innerHTML = `
-    <div class="toast-icon">
-      <i class="fa-solid fa-comment-dots"></i>
-    </div>
-    <div class="toast-content">
-      <div class="toast-title">${escapeHtml(title)}</div>
-      <div class="toast-message">${escapeHtml(message)}</div>
-    </div>
-    <button class="toast-close-btn" aria-label="닫기">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-  `;
-  
-  const contentEl = toast.querySelector('.toast-content');
-  if (onClick) {
-    contentEl.addEventListener('click', () => {
-      onClick();
-      toast.classList.remove('show');
-      toast.classList.add('hide');
-      setTimeout(() => toast.remove(), 400);
-    });
-  }
-  
-  const closeBtn = toast.querySelector('.toast-close-btn');
-  closeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toast.classList.remove('show');
-    toast.classList.add('hide');
-    setTimeout(() => toast.remove(), 400);
-  });
-  
-  container.appendChild(toast);
-  
-  // 애니메이션 효과 트리거
-  setTimeout(() => {
-    toast.classList.add('show');
-  }, 50);
-  
-  // 5초 후 자동 닫기
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.classList.remove('show');
-      toast.classList.add('hide');
-      setTimeout(() => toast.remove(), 400);
-    }
-  }, 5000);
-}
+// ==================== 실시간 쪽지 알림 및 백그라운드 폴링 기능 ====================
 
 // 실시간 쪽지 폴링 시작
 function startDmPolling() {
@@ -5292,55 +5229,19 @@ function startDmPolling() {
   state.dmPollingInterval = setInterval(pollNewMessages, 15000);
 }
 
-// 신규 쪽지 백그라운드 탐색 루틴
+// 신규 쪽지 백그라운드 탐색 루틴 (15초마다 실행되어 안 읽은 쪽지 수와 쪽지함 UI를 동기화)
 async function pollNewMessages() {
   if (!state.currentUser || state.currentUser.isGuest || !supabaseClient) return;
 
   try {
-    const { data, error } = await supabaseClient
-      .from('messages')
-      .select('id, sender_name, message, is_read, created_at')
-      .eq('receiver_id', state.currentUser.id)
-      .eq('is_read', false)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-
-    const currentUnreadList = data || [];
-
-    // 만약 최초 로드 시점이라면 알림 띄우지 않고 알려진 ID 목록으로 초기 등록
-    if (state.alertedMessageIds === null) {
-      state.alertedMessageIds = new Set(currentUnreadList.map(m => m.id));
-      return;
-    }
-
-    // 이미 알린 적이 없는 새로운 안 읽은 쪽지 탐색
-    const newUnreadMessages = currentUnreadList.filter(m => !state.alertedMessageIds.has(m.id));
-
-    if (newUnreadMessages.length > 0) {
-      // 1. 알려진 메시지 목록 업데이트
-      newUnreadMessages.forEach(m => state.alertedMessageIds.add(m.id));
-
-      // 2. 가장 최신 쪽지 기준 알림 토스트 출력
-      const latestMsg = newUnreadMessages[0];
-      const toastTitle = `${latestMsg.sender_name} 님으로부터 새 쪽지가 도착했습니다!`;
-      const toastMsg = latestMsg.message;
-      
-      showToast(toastTitle, toastMsg, () => {
-        // 토스트 클릭 시 쪽지함 모달 열림 연동
-        const inboxBtn = document.getElementById('btnDirectMessageInbox');
-        if (inboxBtn) inboxBtn.click();
-      });
-
-      // 3. 만약 쪽지함 모달이 열려 있다면 즉시 화면 동기화
-      const dmModal = document.getElementById('dmInboxModal');
-      if (dmModal && !dmModal.classList.contains('hidden')) {
-        await syncDMs();
-        renderDmInbox();
-      } else {
-        // 쪽지함이 닫혀 있으면 뱃지 개수만 갱신
-        await updateDmUnreadCount();
-      }
+    // 1. 만약 쪽지함 모달이 열려 있다면 전체 동기화하여 UI와 뱃지를 동시에 갱신
+    const dmModal = document.getElementById('dmInboxModal');
+    if (dmModal && !dmModal.classList.contains('hidden')) {
+      await syncDMs();
+      renderDmInbox();
+    } else {
+      // 2. 쪽지함이 닫혀 있는 경우 백그라운드에서 안 읽은 개수를 확인하여 우측 상단 뱃지만 갱신
+      await updateDmUnreadCount();
     }
   } catch (err) {
     console.error("신규 쪽지 폴링 실패:", err);
