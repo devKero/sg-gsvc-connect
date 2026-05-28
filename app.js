@@ -48,7 +48,8 @@ let state = {
   dmActiveSubTab: 'received', // 쪽지함 하위 탭 ('received', 'sent')
   adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries', 'quick_links')
   adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
-  adminMemberSubTab: 'active'  // 어드민 회원 하위 탭 ('active', 'trash')
+  adminMemberSubTab: 'active',  // 어드민 회원 하위 탭 ('active', 'trash')
+  editingLinkId: null          // 수정중인 퀵링크 ID
 };
 
 const AVATAR_COLORS = [
@@ -4692,6 +4693,7 @@ function renderQuickLinks() {
 }
 
 // 어드민 탭 리스트 테이블 렌더링
+// 어드민 탭 리스트 테이블 렌더링
 function renderAdminQuickLinks() {
   const tbody = document.getElementById('adminQuickLinksTableBody');
   const countEl = document.getElementById('adminQuickLinksCount');
@@ -4714,42 +4716,134 @@ function renderAdminQuickLinks() {
   
   state.quickLinks.forEach((link, index) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(link.title)}</td>
-      <td style="color: var(--color-text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;">
-        <a href="${link.url}" target="_blank" style="text-decoration: underline; color: var(--color-sogang-gold);">${escapeHtml(link.url)}</a>
-      </td>
-      <td>
-        <button class="btn btn-light btn-sm btn-up" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.2rem;" ${index === 0 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
-          <i class="fa-solid fa-arrow-up"></i>
-        </button>
-        <button class="btn btn-light btn-sm btn-down" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.5rem;" ${index === state.quickLinks.length - 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
-          <i class="fa-solid fa-arrow-down"></i>
-        </button>
-        <button class="btn btn-light btn-sm admin-delete-link-btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
-          <i class="fa-solid fa-trash-can"></i> 삭제
-        </button>
-      </td>
-    `;
     
-    if (index > 0) {
-      tr.querySelector('.btn-up').addEventListener('click', () => {
-        handleMoveQuickLink(index, 'up');
+    // 수정 모드인 경우
+    if (state.editingLinkId === link.id) {
+      tr.innerHTML = `
+        <td>
+          <input type="text" id="editLinkTitle_${link.id}" value="${escapeHtml(link.title)}" style="font-size: 0.8rem; padding: 0.3rem 0.5rem; border: 1px solid var(--color-sogang); border-radius: 4px; width: 100%; font-weight: 700;">
+        </td>
+        <td>
+          <input type="url" id="editLinkUrl_${link.id}" value="${escapeHtml(link.url)}" style="font-size: 0.8rem; padding: 0.3rem 0.5rem; border: 1px solid var(--color-sogang); border-radius: 4px; width: 100%;">
+        </td>
+        <td>
+          <button class="btn btn-sogang btn-sm btn-save-edit" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.2rem; font-weight: 700;">
+            <i class="fa-solid fa-check"></i> 저장
+          </button>
+          <button class="btn btn-light btn-sm btn-cancel-edit" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-text-sub);">
+            취소
+          </button>
+        </td>
+      `;
+      
+      tr.querySelector('.btn-save-edit').addEventListener('click', () => {
+        handleSaveQuickLinkEdit(link.id);
+      });
+      
+      tr.querySelector('.btn-cancel-edit').addEventListener('click', () => {
+        state.editingLinkId = null;
+        renderAdminQuickLinks();
+      });
+      
+    } else {
+      // 일반 조회 모드
+      tr.innerHTML = `
+        <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(link.title)}</td>
+        <td style="color: var(--color-text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;">
+          <a href="${link.url}" target="_blank" style="text-decoration: underline; color: var(--color-sogang-gold);">${escapeHtml(link.url)}</a>
+        </td>
+        <td>
+          <button class="btn btn-light btn-sm btn-up" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.2rem;" ${index === 0 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+            <i class="fa-solid fa-arrow-up"></i>
+          </button>
+          <button class="btn btn-light btn-sm btn-down" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.4rem;" ${index === state.quickLinks.length - 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+            <i class="fa-solid fa-arrow-down"></i>
+          </button>
+          <button class="btn btn-light btn-sm btn-edit-link" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.2rem; border-color: rgba(197, 160, 89, 0.4); color: var(--color-sogang-gold);">
+            <i class="fa-solid fa-pen"></i> 수정
+          </button>
+          <button class="btn btn-light btn-sm admin-delete-link-btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
+            <i class="fa-solid fa-trash-can"></i> 삭제
+          </button>
+        </td>
+      `;
+      
+      if (index > 0) {
+        tr.querySelector('.btn-up').addEventListener('click', () => {
+          handleMoveQuickLink(index, 'up');
+        });
+      }
+      
+      if (index < state.quickLinks.length - 1) {
+        tr.querySelector('.btn-down').addEventListener('click', () => {
+          handleMoveQuickLink(index, 'down');
+        });
+      }
+      
+      tr.querySelector('.btn-edit-link').addEventListener('click', () => {
+        state.editingLinkId = link.id;
+        renderAdminQuickLinks();
+      });
+      
+      tr.querySelector('.admin-delete-link-btn').addEventListener('click', () => {
+        handleDeleteQuickLink(link.id, link.title);
       });
     }
-    
-    if (index < state.quickLinks.length - 1) {
-      tr.querySelector('.btn-down').addEventListener('click', () => {
-        handleMoveQuickLink(index, 'down');
-      });
-    }
-    
-    tr.querySelector('.admin-delete-link-btn').addEventListener('click', () => {
-      handleDeleteQuickLink(link.id, link.title);
-    });
     
     tbody.appendChild(tr);
   });
+}
+
+// 빠른 링크 수정 저장
+async function handleSaveQuickLinkEdit(linkId) {
+  const titleInput = document.getElementById(`editLinkTitle_${linkId}`);
+  const urlInput = document.getElementById(`editLinkUrl_${linkId}`);
+  if (!titleInput || !urlInput) return;
+  
+  const title = titleInput.value.trim();
+  const url = urlInput.value.trim();
+  
+  if (!title || !url) {
+    alert("링크 이름과 URL을 모두 입력해 주세요.");
+    return;
+  }
+  
+  const linkIndex = state.quickLinks.findIndex(l => l.id === linkId);
+  if (linkIndex === -1) return;
+  
+  if (state.quickLinks.some((l, idx) => idx !== linkIndex && l.title === title)) {
+    alert("이미 존재하는 링크 이름입니다.");
+    return;
+  }
+  
+  // 로컬 데이터 갱신
+  const currentLink = state.quickLinks[linkIndex];
+  currentLink.title = title;
+  currentLink.url = url;
+  
+  localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+  
+  // 에디트 상태 종료 및 UI 업데이트
+  state.editingLinkId = null;
+  renderQuickLinks();
+  renderAdminQuickLinks();
+  
+  // Supabase 서버 동기화
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('quick_links')
+        .update({ title, url })
+        .eq('id', linkId);
+      if (error) throw error;
+      alert("링크가 성공적으로 수정되었습니다.");
+    } catch (err) {
+      console.error("Supabase 퀵링크 수정 실패:", err);
+      alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+    }
+  } else {
+    alert("로컬 스토리지 모드: 링크가 수정되었습니다.");
+  }
 }
 
 // 빠른 링크 순서 변경
