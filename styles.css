@@ -2319,8 +2319,17 @@ a {
     max-width: 110px !important;
   }
 
-  #btnRefreshDm {
-    margin-right: 1.5rem !important;
+  .btn-refresh-absolute {
+    top: 0.5rem !important;
+    right: 2.7rem !important;
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+  }
+
+  .btn-refresh-absolute .refresh-text {
+    display: none !important;
   }
 
   /* 최근 대화 목록 및 새 쪽지 작성 탭 wrap 처리 */
@@ -3844,6 +3853,38 @@ a {
   .dm-bubble-actions-row {
     opacity: 0.75 !important;
   }
+}
+
+/* 새로고침 절대 위치 스타일 (쪽지함 모달용) */
+.btn-refresh-absolute {
+  position: absolute;
+  top: 1rem;
+  right: 3.8rem;
+  height: 32px;
+  padding: 0 0.8rem;
+  border-radius: 16px;
+  background-color: #f1f3f7;
+  color: var(--color-text-main);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  font-weight: 500;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  z-index: 1061;
+}
+
+.btn-refresh-absolute:hover {
+  background-color: var(--color-sogang-glow);
+  color: var(--color-sogang);
+}
+
+.btn-refresh-absolute i {
+  font-size: 0.8rem;
 }
 
 
