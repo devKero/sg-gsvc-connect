@@ -260,7 +260,16 @@
 
         <!-- 멤버 관리 테이블 -->
         <div class="admin-table-section" id="adminMembersSection">
-          <div class="admin-table-header">
+          <!-- 회원 서브 탭 메뉴 -->
+          <div class="admin-sub-tab-menu" style="display: flex; gap: 0.5rem; padding: 1rem 1.5rem 0.5rem 1.5rem; border-bottom: 1px solid var(--color-border);">
+            <button id="adminMemTabActive" class="btn btn-sm" style="background: none; border: none; border-bottom: 3px solid var(--color-sogang); border-radius: 0; padding: 0.5rem 1rem; font-weight: 700; color: var(--color-sogang); cursor: pointer;">
+              활성 회원 (<span id="adminActiveMemCount">0</span>)
+            </button>
+            <button id="adminMemTabTrash" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">
+              <i class="fa-solid fa-trash-can"></i> 휴지통 (<span id="adminTrashMemCount">0</span>)
+            </button>
+          </div>
+          <div class="admin-table-header" style="margin-top: 1rem;">
             <h3><i class="fa-solid fa-table-list"></i> 멤버 관리</h3>
             <div class="admin-table-actions">
               <div class="admin-search-box">

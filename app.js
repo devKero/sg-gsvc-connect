@@ -43,7 +43,8 @@ let state = {
   unreadNotifCount: 0,      // 미확인 알림 수
   inquiries: [],           // 문의/건의 데이터
   adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries')
-  adminInquirySubTab: 'active' // 어드민 문의 하위 탭 ('active', 'trash')
+  adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
+  adminMemberSubTab: 'active'  // 어드민 회원 하위 탭 ('active', 'trash')
 };
 
 const AVATAR_COLORS = [
@@ -1147,6 +1148,14 @@ function setupEventListeners() {
   if (adminInqTabTrash) {
     adminInqTabTrash.addEventListener('click', () => switchAdminInquirySubTab('trash'));
   }
+  const adminMemTabActive = document.getElementById('adminMemTabActive');
+  if (adminMemTabActive) {
+    adminMemTabActive.addEventListener('click', () => switchAdminMemberSubTab('active'));
+  }
+  const adminMemTabTrash = document.getElementById('adminMemTabTrash');
+  if (adminMemTabTrash) {
+    adminMemTabTrash.addEventListener('click', () => switchAdminMemberSubTab('trash'));
+  }
 
   // --- 개인정보 처리방침 모달 관련 리스너 ---
   const btnLoginShowPrivacy = document.getElementById('btnLoginShowPrivacy');
@@ -1207,6 +1216,11 @@ function handleLogin(e) {
   );
 
   if (matchedMember) {
+    if (matchedMember.role === 'deleted') {
+      errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> 삭제되었거나 비활성화된 계정입니다.`;
+      errorEl.classList.remove('hidden');
+      return;
+    }
     errorEl.classList.add('hidden');
     
     // 로그인 정보 저장/삭제 처리
@@ -1238,6 +1252,7 @@ function handleLogin(e) {
 
     enterDashboard();
   } else {
+    errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> 학번 또는 비밀번호가 일치하지 않습니다.`;
     errorEl.classList.remove('hidden');
   }
 }
@@ -1465,13 +1480,23 @@ function renderAdminDashboard() {
   if (!state.isAdmin) return;
 
   const nonAdminMembers = state.members.filter(m => m.id !== 'admin');
+  
+  // 활성 회원 및 휴지통 회원 분리
+  const activeMembers = nonAdminMembers.filter(m => m.role !== 'deleted');
+  const trashMembers = nonAdminMembers.filter(m => m.role === 'deleted');
 
-  // 운영 기수 필터 드롭다운 동적 갱신 (선택 상태 보존)
+  // 활성/휴지통 서브탭 뱃지 개수 업데이트
+  const activeCountEl = document.getElementById('adminActiveMemCount');
+  const trashCountEl = document.getElementById('adminTrashMemCount');
+  if (activeCountEl) activeCountEl.innerText = String(activeMembers.length);
+  if (trashCountEl) trashCountEl.innerText = String(trashMembers.length);
+
+  // 운영 기수 필터 드롭다운 동적 갱신 (선택 상태 보존, 활성 회원 기준)
   const adminGenSelect = document.getElementById('adminGenFilter');
   if (adminGenSelect) {
     const prevVal = state.adminSelectedGeneration;
     adminGenSelect.innerHTML = '<option value="">모든 기수</option>';
-    const gens = [...new Set(nonAdminMembers
+    const gens = [...new Set(activeMembers
       .filter(m => m.generation)
       .map(m => m.generation)
     )].sort((a, b) => a - b);
@@ -1484,14 +1509,14 @@ function renderAdminDashboard() {
     adminGenSelect.value = prevVal;
   }
 
-  // 1. 통계 수치 업데이트
-  const totalCount = nonAdminMembers.length;
+  // 1. 통계 수치 업데이트 (활성 회원 기준)
+  const totalCount = activeMembers.length;
   
-  const adminCount = nonAdminMembers.filter(m => 
+  const adminCount = activeMembers.filter(m => 
     m.role === 'super_admin' || m.role === 'admin'
   ).length;
   
-  const generations = [...new Set(nonAdminMembers
+  const generations = [...new Set(activeMembers
     .filter(m => m.generation)
     .map(m => m.generation)
   )];
@@ -1506,8 +1531,11 @@ function renderAdminDashboard() {
   if (!tbody) return;
   tbody.innerHTML = "";
 
+  // 현재 활성화된 서브탭에 따른 회원 소스 정의
+  const currentMembersSource = (state.adminMemberSubTab === 'trash') ? trashMembers : activeMembers;
+
   // 실시간 검색어, 기수 필터, 권한 필터 AND 조건 적용
-  const filtered = nonAdminMembers.filter(m => {
+  const filtered = currentMembersSource.filter(m => {
     // 1) 이름 또는 학번 검색어 매칭
     let matchesSearch = true;
     if (state.adminSearchTerm) {
@@ -1524,7 +1552,7 @@ function renderAdminDashboard() {
 
     // 3) 권한 매칭
     let matchesRole = true;
-    if (state.adminSelectedRole) {
+    if (state.adminMemberSubTab !== 'trash' && state.adminSelectedRole) {
       const role = state.adminSelectedRole;
       if (role === 'super_admin') {
         matchesRole = m.role === 'super_admin';
@@ -1565,14 +1593,16 @@ function renderAdminDashboard() {
       roleBadgeHtml = `<span class="admin-role-badge super-admin"><i class="fa-solid fa-crown"></i> 시스템 관리</span>`;
     } else if (member.role === "admin") {
       roleBadgeHtml = `<span class="admin-role-badge admin"><i class="fa-solid fa-user-shield"></i> 운영진</span>`;
+    } else if (member.role === "deleted") {
+      roleBadgeHtml = `<span class="admin-role-badge deleted" style="background-color: var(--color-text-dim); color: #fff;"><i class="fa-solid fa-ban"></i> 삭제됨</span>`;
     } else {
       roleBadgeHtml = `<span class="admin-role-badge member"><i class="fa-solid fa-user"></i> 원우</span>`;
     }
 
     const isChecked = member.role === "admin" || member.role === "super_admin";
     const isSuperAdminDisabled = member.role === "super_admin";
-    // 최고 운영진만 권한 토글을 변경할 수 있도록 제한
-    const isToggleDisabled = !state.isSuperAdmin || isSuperAdminDisabled;
+    // 최고 운영진만 권한 토글을 변경할 수 있고, 휴지통 탭인 경우에는 토글 불가
+    const isToggleDisabled = !state.isSuperAdmin || isSuperAdminDisabled || state.adminMemberSubTab === 'trash';
 
     const toggleHtml = `
       <label class="admin-toggle-switch">
@@ -1583,21 +1613,36 @@ function renderAdminDashboard() {
       </label>
     `;
 
-    const manageButtonsHtml = `
-      <div style="display: flex; gap: 0.5rem;">
-        <button class="btn btn-light btn-sm admin-edit-btn" data-id="${member.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px;">
-          <i class="fa-solid fa-pen"></i> 수정
-        </button>
-        <button class="btn btn-light btn-sm admin-reset-pw-btn" data-id="${member.id}" title="원우 비밀번호를 최초 전화번호 뒷자리로 리셋" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang-gold); border-color: rgba(197,160,89,0.3);">
-          <i class="fa-solid fa-rotate-left"></i> 초기화
-        </button>
-        <button class="btn btn-light btn-sm admin-delete-btn" data-id="${member.id}" 
-          ${isSuperAdminDisabled ? 'disabled' : ''} 
-          style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
-          <i class="fa-solid fa-trash-can"></i> 삭제
-        </button>
-      </div>
-    `;
+    let manageButtonsHtml = "";
+    if (state.adminMemberSubTab === 'trash') {
+      manageButtonsHtml = `
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-light btn-sm admin-restore-btn" data-id="${member.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang-gold); border-color: rgba(197,160,89,0.3);">
+            <i class="fa-solid fa-rotate-left"></i> 복구
+          </button>
+          <button class="btn btn-light btn-sm admin-delete-permanent-btn" data-id="${member.id}" 
+            style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
+            <i class="fa-solid fa-trash-can"></i> 영구삭제
+          </button>
+        </div>
+      `;
+    } else {
+      manageButtonsHtml = `
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-light btn-sm admin-edit-btn" data-id="${member.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px;">
+            <i class="fa-solid fa-pen"></i> 수정
+          </button>
+          <button class="btn btn-light btn-sm admin-reset-pw-btn" data-id="${member.id}" title="원우 비밀번호를 최초 전화번호 뒷자리로 리셋" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang-gold); border-color: rgba(197,160,89,0.3);">
+            <i class="fa-solid fa-rotate-left"></i> 초기화
+          </button>
+          <button class="btn btn-light btn-sm admin-delete-btn" data-id="${member.id}" 
+            ${isSuperAdminDisabled ? 'disabled' : ''} 
+            style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
+            <i class="fa-solid fa-trash-can"></i> 삭제
+          </button>
+        </div>
+      `;
+    }
 
     tr.innerHTML = `
       <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(member.name || "")}</td>
@@ -1623,26 +1668,37 @@ function renderAdminDashboard() {
       });
     }
 
-    // 2) 편집 버튼 이벤트
-    tr.querySelector('.admin-edit-btn').addEventListener('click', () => {
-      openProfileModal(member.id);
-      enableEditMode();
-    });
-
-    // 3) 비밀번호 초기화 버튼 이벤트
-    const resetPwBtn = tr.querySelector('.admin-reset-pw-btn');
-    if (resetPwBtn) {
-      resetPwBtn.addEventListener('click', () => {
-        resetMemberPassword(member.id, member.name);
+    if (state.adminMemberSubTab === 'trash') {
+      // 복구 버튼 이벤트
+      tr.querySelector('.admin-restore-btn').addEventListener('click', () => {
+        handleRestoreMember(member.id, member.name);
       });
-    }
-
-    // 4) 삭제 버튼 이벤트
-    const delBtn = tr.querySelector('.admin-delete-btn');
-    if (delBtn && !isSuperAdminDisabled) {
-      delBtn.addEventListener('click', async () => {
-        await handleDeleteMember(member.id, member.name);
+      // 영구 삭제 버튼 이벤트
+      tr.querySelector('.admin-delete-permanent-btn').addEventListener('click', () => {
+        handleDeleteMemberPermanent(member.id, member.name);
       });
+    } else {
+      // 2) 편집 버튼 이벤트
+      tr.querySelector('.admin-edit-btn').addEventListener('click', () => {
+        openProfileModal(member.id);
+        enableEditMode();
+      });
+
+      // 3) 비밀번호 초기화 버튼 이벤트
+      const resetPwBtn = tr.querySelector('.admin-reset-pw-btn');
+      if (resetPwBtn) {
+        resetPwBtn.addEventListener('click', () => {
+          resetMemberPassword(member.id, member.name);
+        });
+      }
+
+      // 4) 삭제 버튼 이벤트
+      const delBtn = tr.querySelector('.admin-delete-btn');
+      if (delBtn && !isSuperAdminDisabled) {
+        delBtn.addEventListener('click', async () => {
+          await handleDeleteMember(member.id, member.name);
+        });
+      }
     }
 
     tbody.appendChild(tr);
@@ -1706,7 +1762,7 @@ function renderFilterSelectorsOptions() {
     genSelect.innerHTML = '<option value="">전체 기수</option>';
 
     const gens = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.generation)
+      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.generation)
       .map(m => m.generation)
     )].sort((a, b) => a - b);
 
@@ -1726,7 +1782,7 @@ function renderFilterSelectorsOptions() {
     majorSelect.innerHTML = '<option value="">전체 전공</option>';
 
     const majors = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.classYear)
+      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.classYear)
       .map(m => m.classYear)
     )].sort();
 
@@ -1746,7 +1802,7 @@ function renderFilterSelectorsOptions() {
     degreeSelect.innerHTML = '<option value="">전체 과정</option>';
 
     const degrees = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.degreeProcess)
+      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.degreeProcess)
       .map(m => m.degreeProcess)
     )].sort();
 
@@ -1769,6 +1825,7 @@ function renderMembersGrid() {
   // 필터링 적용
   const filtered = state.members.filter(member => {
     if (member.id === 'admin') return false;
+    if (member.role === 'deleted') return false;
 
     // 1. 검색어 필터링 (이름, 헤드라인, 태그, 소개글, 자유 기재 내용, SNS 링크)
     const matchesSearch = 
@@ -2482,8 +2539,77 @@ async function handleAddMemberSubmit(e) {
 }
 
 // 멤버 삭제 처리 핸들러
+// 멤버 삭제 처리 핸들러 (Soft Delete: 휴지통 이동)
 async function handleDeleteMember(memberId, name) {
-  if (confirm(`정말로 [${name}] 원우을 디렉토리에서 영구 삭제하시겠습니까?\n삭제된 계정 정보는 복구할 수 없으며 로그인이 차단됩니다.`)) {
+  if (confirm(`정말로 [${name}] 원우 정보를 휴지통으로 이동하시겠습니까?\n이동 시 일반 목록에서 제외되며 로그인이 차단됩니다.`)) {
+    const member = state.members.find(m => m.id === memberId);
+    if (member) {
+      member.role = 'deleted';
+      localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+    }
+    
+    // Supabase 클라우드 싱크
+    const isSupabaseActive = supabaseClient !== null;
+    if (isSupabaseActive) {
+      try {
+        const { error } = await supabaseClient
+          .from('members')
+          .update({ role: 'deleted' })
+          .eq('id', memberId);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Supabase 멤버 휴지통 이동 에러:", err);
+        alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+      }
+    }
+
+    renderFilterSelectorsOptions();
+    renderMembersGrid();
+    renderFilterTags();
+    renderAdminDashboard();
+
+    alert(`원우 [${name}] 정보가 휴지통으로 이동되었습니다.`);
+  }
+}
+
+// 멤버 복구 처리 핸들러
+async function handleRestoreMember(memberId, name) {
+  if (confirm(`[${name}] 원우 정보를 활성 회원으로 복구하시겠습니까?`)) {
+    const member = state.members.find(m => m.id === memberId);
+    if (member) {
+      member.role = 'member'; // 복구 시 기본 member 권한 설정
+      localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+    }
+    
+    // Supabase 클라우드 싱크
+    const isSupabaseActive = supabaseClient !== null;
+    if (isSupabaseActive) {
+      try {
+        const { error } = await supabaseClient
+          .from('members')
+          .update({ role: 'member' })
+          .eq('id', memberId);
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Supabase 멤버 복구 에러:", err);
+        alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+      }
+    }
+
+    renderFilterSelectorsOptions();
+    renderMembersGrid();
+    renderFilterTags();
+    renderAdminDashboard();
+
+    alert(`원우 [${name}] 정보가 복구되었습니다.`);
+  }
+}
+
+// 멤버 영구 삭제 처리 핸들러
+async function handleDeleteMemberPermanent(memberId, name) {
+  if (confirm(`정말로 [${name}] 원우 정보를 완전히 영구 삭제하시겠습니까?\n이 작업은 되돌릴 수 없으며 데이터가 안전하게 파기됩니다.`)) {
     state.members = state.members.filter(m => m.id !== memberId);
     localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
     
@@ -2498,7 +2624,7 @@ async function handleDeleteMember(memberId, name) {
 
         if (error) throw error;
       } catch (err) {
-        console.error("Supabase 멤버 삭제 에러:", err);
+        console.error("Supabase 멤버 영구 삭제 에러:", err);
         alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
       }
     }
@@ -2508,7 +2634,7 @@ async function handleDeleteMember(memberId, name) {
     renderFilterTags();
     renderAdminDashboard();
 
-    alert(`원우 [${name}] 데이터가 안전하게 파기되었습니다.`);
+    alert(`원우 [${name}] 정보가 영구히 파기되었습니다.`);
   }
 }
 
@@ -3525,7 +3651,10 @@ function renderMyInquiries() {
     card.innerHTML = `
       <div class="my-inquiry-header">
         <strong style="color:var(--color-text-main); font-size:0.85rem;">${escapeHtml(inq.title || "제목 없음")}</strong>
-        <span class="inquiry-status-badge ${statusClass}">${statusText}</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="inquiry-status-badge ${statusClass}">${statusText}</span>
+          ${inq.status === 'pending' ? `<button class="btn btn-light btn-sm btn-delete-my-inquiry" data-id="${inq.id}" style="padding: 0.15rem 0.35rem; font-size: 0.7rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2); cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>` : ''}
+        </div>
       </div>
       <p style="margin: 0.2rem 0; color:var(--color-text-sub); line-height:1.4;">${escapeHtml(inq.message)}</p>
       <div style="font-size:0.7rem; color:var(--color-text-dim); text-align:right;">${formattedDate}</div>
@@ -3536,8 +3665,41 @@ function renderMyInquiries() {
         </div>
       ` : ''}
     `;
+
+    const delBtn = card.querySelector('.btn-delete-my-inquiry');
+    if (delBtn) {
+      delBtn.addEventListener('click', () => {
+        handleUserDeleteInquiry(inq.id);
+      });
+    }
+
     container.appendChild(card);
   });
+}
+
+// 사용자 본인 문의 삭제 처리 핸들러 (답변 대기 상태)
+async function handleUserDeleteInquiry(inquiryId) {
+  if (confirm("정말로 이 문의사항을 삭제하시겠습니까?")) {
+    state.inquiries = state.inquiries.filter(i => i.id !== inquiryId);
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('inquiries')
+          .delete()
+          .eq('id', inquiryId);
+        if (error) throw error;
+        alert("문의사항이 정상적으로 삭제되었습니다.");
+      } catch (err) {
+        console.error("Supabase 문의사항 삭제 에러:", err);
+        alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+      }
+    } else {
+      alert("문의사항이 삭제되었습니다.");
+    }
+    renderMyInquiries();
+  }
 }
 
 // ==================== 비밀번호 변경 (Change Password) 기능 ====================
@@ -3676,6 +3838,54 @@ function switchAdminActiveTab(tab) {
     secMembers.classList.add('hidden');
     renderAdminInquiries();
   }
+}
+
+function switchAdminMemberSubTab(subTab) {
+  state.adminMemberSubTab = subTab;
+  const btnActive = document.getElementById('adminMemTabActive');
+  const btnTrash = document.getElementById('adminMemTabTrash');
+  if (!btnActive || !btnTrash) return;
+
+  if (subTab === 'active') {
+    btnActive.style.borderBottom = '3px solid var(--color-sogang)';
+    btnActive.style.fontWeight = '700';
+    btnActive.style.color = 'var(--color-sogang)';
+    btnTrash.style.borderBottom = 'none';
+    btnTrash.style.fontWeight = '500';
+    btnTrash.style.color = 'var(--color-text-sub)';
+  } else {
+    btnTrash.style.borderBottom = '3px solid var(--color-sogang)';
+    btnTrash.style.fontWeight = '700';
+    btnTrash.style.color = 'var(--color-sogang)';
+    btnActive.style.borderBottom = 'none';
+    btnActive.style.fontWeight = '500';
+    btnActive.style.color = 'var(--color-text-sub)';
+  }
+  renderAdminDashboard();
+}
+
+function switchAdminInquirySubTab(subTab) {
+  state.adminInquirySubTab = subTab;
+  const btnActive = document.getElementById('adminInqTabActive');
+  const btnTrash = document.getElementById('adminInqTabTrash');
+  if (!btnActive || !btnTrash) return;
+
+  if (subTab === 'active') {
+    btnActive.style.borderBottom = '3px solid var(--color-sogang)';
+    btnActive.style.fontWeight = '700';
+    btnActive.style.color = 'var(--color-sogang)';
+    btnTrash.style.borderBottom = 'none';
+    btnTrash.style.fontWeight = '500';
+    btnTrash.style.color = 'var(--color-text-sub)';
+  } else {
+    btnTrash.style.borderBottom = '3px solid var(--color-sogang)';
+    btnTrash.style.fontWeight = '700';
+    btnTrash.style.color = 'var(--color-sogang)';
+    btnActive.style.borderBottom = 'none';
+    btnActive.style.fontWeight = '500';
+    btnActive.style.color = 'var(--color-text-sub)';
+  }
+  renderAdminInquiries();
 }
 
 // 어드민 문의 목록 렌더링
