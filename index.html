@@ -223,6 +223,15 @@
           </div>
           <div class="members-grid grid-view" id="membersGrid">
           </div>
+          <!-- 로딩 및 더보기 영역 (동적 로딩) -->
+          <div id="membersLazyLoadArea" class="lazy-load-area" style="text-align: center; padding: 2rem 0; display: none;">
+            <button id="btnLoadMoreMembers" class="btn btn-sogang" style="padding: 0.6rem 2.5rem; border-radius: 30px;">
+              <i class="fa-solid fa-angle-down"></i> 더 보기
+            </button>
+            <div id="membersLoadSpinner" class="hidden" style="color: var(--color-sogang); font-size: 1.1rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center; width: 100%;">
+              <i class="fa-solid fa-circle-notch fa-spin"></i> 멤버 로딩 중...
+            </div>
+          </div>
         </main>
 
       </div>
@@ -965,10 +974,10 @@
           </div>
         </div>
 
-        <!-- 실시간 지연 안내 배너 -->
+        <!-- 실시간 지연 및 보관 기간 안내 배너 -->
         <div style="margin-top: 0.8rem; padding: 0.5rem 0.75rem; background-color: var(--color-bg-base); border-radius: 6px; border: 1px solid var(--color-border); display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; font-size: 0.7rem; color: var(--color-text-dim);">
           <i class="fa-solid fa-circle-info" style="color: #ff9800; font-size: 0.8rem;"></i>
-          <span>본 쪽지함은 15초 주기로 갱신됩니다. 실시간 메신저가 아니므로 약간의 지연이 있을 수 있습니다.</span>
+          <span>본 쪽지함은 15초 주기로 갱신되며, 대화 기록은 최대 90일간 보관 후 자동 파기됩니다. (실시간 메신저가 아닙니다)</span>
         </div>
       </div>
     </div>

@@ -48,6 +48,7 @@ let state = {
   dmActiveSubTab: 'received', // 쪽지함 하위 탭 ('received', 'sent')
   activeDmOpponentId: "",      // 활성화된 1:1 대화방 상대 ID
   leftChats: {},               // 대화방 나간 시점 기록 { opponentId: leftAtIsoString }
+  membersLimit: 12,            // 무한 스크롤 한 번에 노출될 회원 카드 개수
   adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries', 'quick_links')
   adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
   adminMemberSubTab: 'active',  // 어드민 회원 하위 탭 ('active', 'trash')
@@ -595,6 +596,40 @@ async function autoPurgeTrash() {
     localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
     if (state.isAdmin) renderAdminInquiries();
   }
+
+  // 3. 90일 경과한 쪽지(DM) 삭제
+  const dmCutoff = new Date();
+  dmCutoff.setDate(dmCutoff.getDate() - 90);
+
+  try {
+    const { error: dmError } = await supabaseClient
+      .from('messages')
+      .delete()
+      .lt('created_at', dmCutoff.toISOString());
+    if (dmError) throw dmError;
+    console.log(`[Auto-Purge] 90일 경과한 오래된 쪽지 삭제 정리 완료 (기준일: ${dmCutoff.toISOString().substring(0, 10)})`);
+  } catch (err) {
+    console.error("[Auto-Purge] 오래된 쪽지 정리 실패:", err);
+  }
+
+  // 로컬 캐시도 90일 지난 것 정리
+  const localCachedMsgs = localStorage.getItem('sogang_unity_messages');
+  if (localCachedMsgs) {
+    try {
+      const msgs = JSON.parse(localCachedMsgs);
+      const filteredMsgs = msgs.filter(m => {
+        const msgTime = new Date(m.createdAt || m.created_at);
+        return msgTime >= dmCutoff;
+      });
+      if (filteredMsgs.length !== msgs.length) {
+        localStorage.setItem('sogang_unity_messages', JSON.stringify(filteredMsgs));
+        state.messages = filteredMsgs;
+        console.log(`[Auto-Purge] 로컬 캐시에서 오래된 쪽지 ${msgs.length - filteredMsgs.length}개 삭제 정리 완료`);
+      }
+    } catch (e) {
+      console.error("[Auto-Purge] 로컬 캐시 쪽지 정리 중 에러:", e);
+    }
+  }
 }
 
 // 이미지 업로드 비동기 핸들러 (스토리지 및 오프라인 Base64 분기)
@@ -758,7 +793,7 @@ function setupEventListeners() {
   // 실시간 검색어 입력
   document.getElementById('searchInput').addEventListener('input', (e) => {
     state.searchTerm = e.target.value.trim().toLowerCase();
-    renderMembersGrid();
+    renderMembersGrid(true);
   });
 
   // 기수 필터 변경
@@ -774,7 +809,7 @@ function setupEventListeners() {
       }
     }
     renderFilterTags();
-    renderMembersGrid();
+    renderMembersGrid(true);
   });
 
   // 전공 필터 변경
@@ -792,7 +827,7 @@ function setupEventListeners() {
         }
       }
       renderFilterTags();
-      renderMembersGrid();
+      renderMembersGrid(true);
     });
   }
 
@@ -811,7 +846,7 @@ function setupEventListeners() {
         }
       }
       renderFilterTags();
-      renderMembersGrid();
+      renderMembersGrid(true);
     });
   }
 
@@ -838,7 +873,7 @@ function setupEventListeners() {
     document.getElementById('clearFilterBtn').classList.add('hidden');
     document.querySelectorAll('.btn-tag').forEach(b => b.classList.remove('active'));
     renderFilterTags();
-    renderMembersGrid();
+    renderMembersGrid(true);
   });
 
   // 키워드 자체 실시간 검색 필터링
@@ -1450,6 +1485,58 @@ function setupEventListeners() {
       }
     });
   }
+
+  // 더 보기 버튼 클릭 이벤트 바인딩
+  const btnLoadMore = document.getElementById('btnLoadMoreMembers');
+  if (btnLoadMore) {
+    btnLoadMore.addEventListener('click', loadMoreMembers);
+  }
+
+  // 무한 스크롤 설정
+  setupInfiniteScroll();
+}
+
+// 더보기 버튼 클릭 시 다음 페이지 멤버 추가 로드
+function loadMoreMembers() {
+  const btnLoadMore = document.getElementById('btnLoadMoreMembers');
+  const loadSpinner = document.getElementById('membersLoadSpinner');
+  
+  if (btnLoadMore) btnLoadMore.classList.add('hidden');
+  if (loadSpinner) loadSpinner.classList.remove('hidden');
+  
+  // 자연스러운 로딩 연출을 위해 250ms의 인위적인 딜레이 적용
+  setTimeout(() => {
+    state.membersLimit += 12;
+    renderMembersGrid();
+  }, 250);
+}
+
+// 무한 스크롤 이벤트 리스너 바인딩
+function setupInfiniteScroll() {
+  let isThrottled = false;
+  window.addEventListener('scroll', () => {
+    // 디렉토리 탭이 활성화 상태일 때만 동작
+    if (state.activeMainTab !== 'directory') return;
+    if (isThrottled) return;
+
+    // 바닥 근처(바닥에서 150px 이내)에 스크롤 도달 시점 감지
+    const threshold = 150;
+    const isNearBottom = (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - threshold);
+
+    if (isNearBottom) {
+      const lazyLoadArea = document.getElementById('membersLazyLoadArea');
+      const btnLoadMore = document.getElementById('btnLoadMoreMembers');
+      
+      // 로드할 더 많은 카드가 남아있고, 현재 로딩중이지 않을 때
+      if (lazyLoadArea && lazyLoadArea.style.display !== 'none' && btnLoadMore && !btnLoadMore.classList.contains('hidden')) {
+        isThrottled = true;
+        loadMoreMembers();
+        setTimeout(() => {
+          isThrottled = false;
+        }, 500); // 500ms 디바운스/쓰로틀링
+      }
+    }
+  });
 }
 
 // 개인정보 처리방침 모달 제어 함수
@@ -2130,7 +2217,10 @@ function renderFilterSelectorsOptions() {
 }
 
 // 멤버 카드 그리드 렌더링
-function renderMembersGrid() {
+function renderMembersGrid(resetLimit = false) {
+  if (resetLimit) {
+    state.membersLimit = 12;
+  }
   const gridContainer = document.getElementById('membersGrid');
   gridContainer.innerHTML = "";
 
@@ -2198,8 +2288,24 @@ function renderMembersGrid() {
     return;
   }
 
+  // 로딩 및 더보기 영역 제어
+  const lazyLoadArea = document.getElementById('membersLazyLoadArea');
+  const btnLoadMore = document.getElementById('btnLoadMoreMembers');
+  const loadSpinner = document.getElementById('membersLoadSpinner');
+
+  if (lazyLoadArea) {
+    if (state.membersLimit < filtered.length) {
+      lazyLoadArea.style.display = 'block';
+      if (btnLoadMore) btnLoadMore.classList.remove('hidden');
+      if (loadSpinner) loadSpinner.classList.add('hidden');
+    } else {
+      lazyLoadArea.style.display = 'none';
+    }
+  }
+
   // 카드 그리기
-  filtered.forEach(member => {
+  const visibleMembers = filtered.slice(0, state.membersLimit);
+  visibleMembers.forEach(member => {
     const card = document.createElement('article');
     card.className = 'member-card';
     const genColor = getGenerationColor(member.generation);
@@ -2338,7 +2444,7 @@ function renderFilterTags() {
         btn.classList.add('active');
         document.getElementById('clearFilterBtn').classList.remove('hidden');
       }
-      renderMembersGrid();
+      renderMembersGrid(true);
     });
 
     container.appendChild(btn);
