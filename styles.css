@@ -3712,5 +3712,25 @@ a {
   font-size: 0.85rem;
 }
 
+/* 삭제된 메시지 흔적(Tombstone) 스타일 */
+.dm-bubble.deleted {
+  font-style: italic;
+  opacity: 0.55;
+  user-select: none;
+}
+
+.dm-chat-row.sent .dm-bubble.deleted {
+  background-color: var(--color-bg-base) !important;
+  color: var(--color-text-dim) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: none !important;
+}
+
+.dm-chat-row.received .dm-bubble.deleted {
+  background-color: var(--color-bg-base) !important;
+  color: var(--color-text-dim) !important;
+  box-shadow: none !important;
+}
+
 
 

@@ -4856,6 +4856,7 @@ function renderDmChatThread(opponentId, forceScroll = false) {
   container.innerHTML = "";
   chatMessages.forEach(msg => {
     const isSent = msg.senderId === state.currentUser.id;
+    const isDeleted = msg.message === "삭제된 쪽지입니다.";
     const row = document.createElement('div');
     row.className = `dm-chat-row ${isSent ? 'sent' : 'received'}`;
 
@@ -4867,26 +4868,34 @@ function renderDmChatThread(opponentId, forceScroll = false) {
     hour = hour ? hour : 12;
     const timeStr = `${ampm} ${hour}:${min}`;
     
-    const showUnread = isSent && !msg.isRead;
+    // 삭제된 메시지가 아니고, 내가 보냈으며, 안 읽었을 때만 1 표시
+    const showUnread = isSent && !isDeleted && !msg.isRead;
+
+    // 내가 보낸 쪽지이면서 삭제되지 않았을 때만 삭제 액션 단추 제공
+    const canDelete = isSent && !isDeleted;
 
     row.innerHTML = `
       <div class="dm-bubble-container">
-        <div class="dm-bubble">${escapeHtml(msg.message)}</div>
+        <div class="dm-bubble ${isDeleted ? 'deleted' : ''}">${escapeHtml(msg.message)}</div>
         <div class="dm-bubble-meta">
           ${showUnread ? `<span class="dm-unread-indicator">1</span>` : ''}
           <span class="dm-bubble-time" title="${msg.createdAt.substring(0, 16).replace('T', ' ')}">${timeStr}</span>
         </div>
       </div>
+      ${canDelete ? `
       <div class="dm-bubble-actions-row">
-        <button class="dm-bubble-action-btn btn-delete-chat" data-id="${msg.id}" title="${isSent ? '발송 취소 (양쪽 삭제)' : '삭제 (내 화면에서만 삭제)'}">
+        <button class="dm-bubble-action-btn btn-delete-chat" data-id="${msg.id}" title="보낸 쪽지 삭제 (내용을 '삭제된 쪽지입니다.'로 변경)">
           <i class="fa-solid fa-trash-can"></i> 삭제
         </button>
       </div>
+      ` : ''}
     `;
 
-    row.querySelector('.btn-delete-chat').addEventListener('click', () => {
-      handleDeleteDm(msg.id, isSent);
-    });
+    if (canDelete) {
+      row.querySelector('.btn-delete-chat').addEventListener('click', () => {
+        handleDeleteDm(msg.id);
+      });
+    }
 
     container.appendChild(row);
   });
@@ -4991,72 +5000,37 @@ async function handleSendDmReply() {
 }
 
 // 쪽지 삭제 처리 핸들러 (발신인 삭제 -> 영구삭제, 수신인 삭제 -> soft delete)
-async function handleDeleteDm(messageId, isSender) {
-  const confirmMsg = isSender 
-    ? "보낸 쪽지를 삭제하시겠습니까?\n삭제 시 상대방(받는 사람)의 쪽지함에서도 완전히 삭제됩니다."
-    : "받은 쪽지를 삭제하시겠습니까?\n삭제 시 회원님의 받은 쪽지함에서만 삭제됩니다.";
+// 쪽지 삭제 처리 핸들러 (본인이 보낸 쪽지만 삭제 가능, 실제 삭제가 아니라 '삭제된 쪽지입니다.'로 업데이트)
+async function handleDeleteDm(messageId) {
+  const confirmMsg = "이 쪽지를 삭제하시겠습니까?\n삭제 시 대화창에서 내용이 '삭제된 쪽지입니다.'로 변경되며 복구할 수 없습니다.";
 
   if (!confirm(confirmMsg)) return;
 
-  if (isSender) {
-    // 발신인 삭제: DB에서 완벽하게 제거
-    state.messages = state.messages.filter(m => m.id !== messageId);
+  // 로컬 상태 변경
+  const targetMsg = state.messages.find(m => m.id === messageId);
+  if (targetMsg) {
+    targetMsg.message = "삭제된 쪽지입니다.";
     localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+  }
 
-    if (supabaseClient) {
-      try {
-        const { error } = await supabaseClient
-          .from('messages')
-          .delete()
-          .eq('id', messageId);
-        if (error) throw error;
-        alert("쪽지가 완전히 삭제되었습니다.");
-        await syncDMs();
-        renderDmInbox();
-      } catch (err) {
-        console.error("Supabase 보낸 쪽지 삭제 실패:", err);
-        alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
-        renderDmInbox();
-      }
-    } else {
-      alert("로컬 스토리지 모드: 쪽지가 삭제되었습니다.");
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('messages')
+        .update({ message: "삭제된 쪽지입니다." })
+        .eq('id', messageId);
+      if (error) throw error;
+      
+      await syncDMs();
+      renderDmInbox();
+    } catch (err) {
+      console.error("Supabase 쪽지 삭제(업데이트) 실패:", err);
+      alert("서버 전송 실패로 로컬에서만 처리되었습니다.");
       renderDmInbox();
     }
   } else {
-    // 수신인 삭제: 본인 화면에서만 안 보이도록 소프트 삭제
-    const msg = state.messages.find(m => m.id === messageId);
-    if (msg) {
-      msg.deletedByReceiver = true;
-      localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
-    }
-
-    if (supabaseClient) {
-      try {
-        const { error } = await supabaseClient
-          .from('messages')
-          .update({ deleted_by_receiver: true })
-          .eq('id', messageId);
-        
-        if (error) {
-          // 컬럼이 미생성 상태인 경우 fallback
-          const { error: fallbackError } = await supabaseClient
-            .from('messages')
-            .delete()
-            .eq('id', messageId);
-          if (fallbackError) throw fallbackError;
-        }
-        alert("쪽지가 삭제되었습니다.");
-        await syncDMs();
-        renderDmInbox();
-      } catch (err) {
-        console.error("Supabase 받은 쪽지 삭제 실패:", err);
-        alert("서버 전송 실패로 로컬에서만 삭제되었습니다.");
-        renderDmInbox();
-      }
-    } else {
-      alert("로컬 스토리지 모드: 쪽지가 삭제되었습니다.");
-      renderDmInbox();
-    }
+    alert("로컬 스토리지 모드: 쪽지가 삭제되었습니다.");
+    renderDmInbox();
   }
 }
 
