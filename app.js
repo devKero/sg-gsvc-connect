@@ -46,6 +46,7 @@ let state = {
   quickLinks: [],           // 퀵링크 데이터
   dmUnreadCount: 0,        // 안 읽은 쪽지 개수
   dmActiveSubTab: 'received', // 쪽지함 하위 탭 ('received', 'sent')
+  activeDmOpponentId: "",      // 활성화된 1:1 대화방 상대 ID
   adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries', 'quick_links')
   adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
   adminMemberSubTab: 'active',  // 어드민 회원 하위 탭 ('active', 'trash')
@@ -1293,7 +1294,10 @@ function setupEventListeners() {
   // 쪽지함 버튼 클릭
   const btnDirectMessageInbox = document.getElementById('btnDirectMessageInbox');
   if (btnDirectMessageInbox) {
-    btnDirectMessageInbox.addEventListener('click', openDmInboxModal);
+    btnDirectMessageInbox.addEventListener('click', () => {
+      state.activeDmOpponentId = "";
+      openDmInboxModal();
+    });
   }
   // 쪽지함 닫기 버튼 클릭
   const closeDmInboxModalBtn = document.getElementById('closeDmInboxModalBtn');
@@ -1307,15 +1311,38 @@ function setupEventListeners() {
       if (e.target.id === 'dmInboxModal') closeDmInboxModal();
     });
   }
-  // 쪽지함 탭 클릭
-  const dmTabReceived = document.getElementById('dmTabReceived');
-  if (dmTabReceived) {
-    dmTabReceived.addEventListener('click', () => switchDmTab('received'));
+  // 목록으로 돌아가기 버튼 클릭
+  const btnDmBackToList = document.getElementById('btnDmBackToList');
+  if (btnDmBackToList) {
+    btnDmBackToList.addEventListener('click', () => {
+      state.activeDmOpponentId = "";
+      renderDmInbox();
+    });
   }
-  const dmTabSent = document.getElementById('dmTabSent');
-  if (dmTabSent) {
-    dmTabSent.addEventListener('click', () => switchDmTab('sent'));
+
+  // 답장 작성 textarea 글자수 표기 및 엔터 전송
+  const dmChatReplyText = document.getElementById('dmChatReplyText');
+  const dmChatCharCount = document.getElementById('dmChatCharCount');
+  if (dmChatReplyText) {
+    dmChatReplyText.addEventListener('input', () => {
+      const len = dmChatReplyText.value.length;
+      if (dmChatCharCount) dmChatCharCount.innerText = `${len} / 500자`;
+    });
+
+    dmChatReplyText.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendDmReply();
+      }
+    });
   }
+
+  // 답장 전송 버튼 클릭
+  const btnDmSendReply = document.getElementById('btnDmSendReply');
+  if (btnDmSendReply) {
+    btnDmSendReply.addEventListener('click', handleSendDmReply);
+  }
+
   // 쪽지함 새로고침
   const btnRefreshDm = document.getElementById('btnRefreshDm');
   if (btnRefreshDm) {
@@ -1383,7 +1410,9 @@ function setupEventListeners() {
       if (state.selectedMemberId) {
         const targetMember = state.members.find(m => m.id === state.selectedMemberId);
         if (targetMember) {
-          openDmSendModal(state.selectedMemberId, targetMember.name);
+          closeProfileModal();
+          state.activeDmOpponentId = state.selectedMemberId;
+          openDmInboxModal();
         }
       }
     });
@@ -4633,27 +4662,14 @@ function openDmInboxModal() {
     alert("로그인 후 쪽지함을 이용할 수 있습니다.");
     return;
   }
-  state.dmActiveSubTab = 'received';
   const modal = document.getElementById('dmInboxModal');
   if (modal) {
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
   }
   
-  const tabRec = document.getElementById('dmTabReceived');
-  const tabSent = document.getElementById('dmTabSent');
-  if (tabRec && tabSent) {
-    tabRec.style.borderBottom = '3px solid var(--color-sogang)';
-    tabRec.style.fontWeight = '700';
-    tabRec.style.color = 'var(--color-sogang)';
-    tabSent.style.borderBottom = 'none';
-    tabSent.style.fontWeight = '500';
-    tabSent.style.color = 'var(--color-text-sub)';
-  }
-  
   syncDMs().then(() => {
     renderDmInbox();
-    markMessagesAsRead();
   });
 }
 
@@ -4663,93 +4679,315 @@ function closeDmInboxModal() {
     modal.classList.add('hidden');
     document.body.style.overflow = '';
   }
-}
-
-function switchDmTab(tab) {
-  state.dmActiveSubTab = tab;
-  const tabRec = document.getElementById('dmTabReceived');
-  const tabSent = document.getElementById('dmTabSent');
-  if (!tabRec || !tabSent) return;
-
-  if (tab === 'received') {
-    tabRec.style.borderBottom = '3px solid var(--color-sogang)';
-    tabRec.style.fontWeight = '700';
-    tabRec.style.color = 'var(--color-sogang)';
-    tabSent.style.borderBottom = 'none';
-    tabSent.style.fontWeight = '500';
-    tabSent.style.color = 'var(--color-text-sub)';
-    markMessagesAsRead();
-  } else {
-    tabSent.style.borderBottom = '3px solid var(--color-sogang)';
-    tabSent.style.fontWeight = '700';
-    tabSent.style.color = 'var(--color-sogang)';
-    tabRec.style.borderBottom = 'none';
-    tabRec.style.fontWeight = '500';
-    tabRec.style.color = 'var(--color-text-sub)';
-  }
-  renderDmInbox();
+  state.activeDmOpponentId = "";
 }
 
 function renderDmInbox() {
+  const inboxTitle = document.getElementById('dmInboxTitle');
+  const chatHeader = document.getElementById('dmChatHeader');
+  const subTabMenu = document.getElementById('dmSubTabMenu');
+  const chatInputContainer = document.getElementById('dmChatInputContainer');
+  const chatReplyText = document.getElementById('dmChatReplyText');
+  const chatCharCount = document.getElementById('dmChatCharCount');
+
+  // textarea 초기화
+  if (chatReplyText) {
+    chatReplyText.value = "";
+    if (chatCharCount) chatCharCount.innerText = "0 / 500자";
+  }
+
+  if (state.activeDmOpponentId) {
+    // 1:1 대화 상세 뷰
+    if (inboxTitle) inboxTitle.classList.add('hidden');
+    if (chatHeader) chatHeader.classList.remove('hidden');
+    if (subTabMenu) subTabMenu.classList.add('hidden');
+    if (chatInputContainer) chatInputContainer.classList.remove('hidden');
+    
+    // 상대방 이름 노출
+    const partner = state.members.find(m => m.id === state.activeDmOpponentId);
+    const chatPartnerName = document.getElementById('dmChatPartnerName');
+    if (chatPartnerName) {
+      if (partner) {
+        chatPartnerName.innerText = `${partner.generation ? `${partner.generation}기 ` : ''}${partner.name} 원우`;
+      } else {
+        chatPartnerName.innerText = state.activeDmOpponentId === 'admin' ? '운영진' : '알 수 없는 원우';
+      }
+    }
+    
+    renderDmChatThread(state.activeDmOpponentId, true);
+    markMessagesAsReadForOpponent(state.activeDmOpponentId);
+  } else {
+    // 스레드 목록 뷰
+    if (inboxTitle) inboxTitle.classList.remove('hidden');
+    if (chatHeader) chatHeader.classList.add('hidden');
+    if (subTabMenu) subTabMenu.classList.remove('hidden');
+    if (chatInputContainer) chatInputContainer.classList.add('hidden');
+    
+    renderDmThreadList();
+  }
+}
+
+// 대화 상대별 스레드 목록 렌더링
+function renderDmThreadList() {
   const container = document.getElementById('dmListContainer');
   if (!container) return;
   container.innerHTML = "";
 
-  let filtered = [];
-  if (state.dmActiveSubTab === 'received') {
-    filtered = state.messages.filter(m => m.receiverId === state.currentUser.id && !m.deletedByReceiver);
-  } else {
-    filtered = state.messages.filter(m => m.senderId === state.currentUser.id);
-  }
+  // 유효한 메시지 필터링 (나에게 왔고 내가 지운 쪽지는 제외)
+  const validMessages = state.messages.filter(m => {
+    const isReceiver = m.receiverId === state.currentUser.id;
+    if (isReceiver && m.deletedByReceiver) return false;
+    return true;
+  });
 
-  if (filtered.length === 0) {
+  // 상대방 별로 그룹화
+  const threadsMap = {};
+  validMessages.forEach(msg => {
+    const opponentId = msg.senderId === state.currentUser.id ? msg.receiverId : msg.senderId;
+    const opponentName = msg.senderId === state.currentUser.id ? msg.receiverName : msg.senderName;
+    
+    if (!threadsMap[opponentId]) {
+      threadsMap[opponentId] = {
+        opponentId,
+        opponentName,
+        messages: [],
+        unreadCount: 0
+      };
+    }
+    
+    threadsMap[opponentId].messages.push(msg);
+    if (msg.receiverId === state.currentUser.id && !msg.isRead) {
+      threadsMap[opponentId].unreadCount++;
+    }
+  });
+
+  const threads = Object.values(threadsMap);
+
+  // 각 스레드마다 가장 최신 메시지 기준으로 내림차순 정렬
+  threads.forEach(t => {
+    t.messages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    t.lastMessage = t.messages[0];
+  });
+
+  threads.sort((a, b) => new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt));
+
+  if (threads.length === 0) {
     container.innerHTML = `
       <div class="dm-empty-state">
-        <i class="fa-regular fa-paper-plane"></i>
-        <span>쪽지 내역이 존재하지 않습니다.</span>
+        <i class="fa-regular fa-comments"></i>
+        <span>진행 중인 대화가 없습니다.</span>
       </div>
     `;
     return;
   }
 
-  filtered.forEach(msg => {
-    const card = document.createElement('div');
-    card.className = `dm-card ${(!msg.isRead && msg.receiverId === state.currentUser.id) ? 'unread' : ''}`;
+  threads.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'dm-thread-item';
     
-    const oppositeName = state.dmActiveSubTab === 'received' ? msg.senderName : msg.receiverName;
-    const labelPrefix = state.dmActiveSubTab === 'received' ? "보낸사람" : "받는사람";
-    const formattedDate = msg.createdAt ? msg.createdAt.substring(0, 16).replace('T', ' ') : '-';
+    const formattedDate = t.lastMessage.createdAt 
+      ? t.lastMessage.createdAt.substring(0, 16).replace('T', ' ') 
+      : '-';
 
-    card.innerHTML = `
-      <div class="dm-header">
-        <div class="dm-sender-info">
-          <i class="fa-solid fa-user" style="font-size:0.75rem; color:var(--color-text-sub);"></i>
-          <span>${labelPrefix}: <strong>${escapeHtml(oppositeName)}</strong></span>
-          ${(!msg.isRead && msg.receiverId === state.currentUser.id) ? '<span class="dm-unread-badge-dot" title="읽지 않은 쪽지"></span>' : ''}
-        </div>
-        <span class="dm-time">${formattedDate}</span>
+    const truncatedBody = t.lastMessage.message.length > 40
+      ? t.lastMessage.message.substring(0, 40) + '...'
+      : t.lastMessage.message;
+
+    // 기수와 아바타 장식
+    const partner = state.members.find(m => m.id === t.opponentId);
+    const initialChar = t.opponentName ? t.opponentName.substring(0, 1) : '?';
+    const bgCol = partner && partner.avatarColor ? partner.avatarColor : '#b30838';
+
+    item.innerHTML = `
+      <div class="dm-thread-avatar" style="background-color: ${bgCol}; color: #fff; font-weight: 700; user-select: none;">
+        ${initialChar}
       </div>
-      <div class="dm-message-body">${escapeHtml(msg.message)}</div>
-      <div style="display:flex; justify-content:flex-end; margin-top:0.2rem; flex-shrink:0; gap:0.35rem;">
-        <button class="btn btn-light btn-sm btn-delete-dm" data-id="${msg.id}" style="padding:0.15rem 0.4rem; font-size:0.7rem; border-radius:4px; color:var(--color-sogang); border-color:rgba(179,8,56,0.15); cursor:pointer;"><i class="fa-solid fa-trash-can"></i> ${state.dmActiveSubTab === 'received' ? '삭제' : '발송취소'}</button>
-        ${state.dmActiveSubTab === 'received' ? `
-          <button class="btn btn-light btn-sm btn-reply-dm" data-sender-id="${msg.senderId}" data-sender-name="${msg.senderName}" style="padding:0.15rem 0.4rem; font-size:0.7rem; border-radius:4px; font-weight:700;"><i class="fa-solid fa-reply"></i> 답장하기</button>
-        ` : ''}
+      <div class="dm-thread-info">
+        <div class="dm-thread-header">
+          <span class="dm-thread-name">${escapeHtml(t.opponentName)}</span>
+          <span class="dm-thread-time">${formattedDate}</span>
+        </div>
+        <div class="dm-thread-body">${escapeHtml(truncatedBody)}</div>
+      </div>
+      ${t.unreadCount > 0 ? `<span class="dm-thread-unread-badge">${t.unreadCount}</span>` : ''}
+    `;
+
+    item.addEventListener('click', () => {
+      state.activeDmOpponentId = t.opponentId;
+      renderDmInbox();
+    });
+
+    container.appendChild(item);
+  });
+}
+
+// 1:1 대화방 상세 렌더링
+function renderDmChatThread(opponentId, forceScroll = false) {
+  const container = document.getElementById('dmListContainer');
+  if (!container) return;
+
+  const previousScrollTop = container.scrollTop;
+  const previousScrollHeight = container.scrollHeight;
+  const wasAtBottom = previousScrollHeight - previousScrollTop <= container.clientHeight + 60;
+
+  // 해당 상대방과의 메시지만 추출하여 시간순(오름차순) 정렬
+  const chatMessages = state.messages
+    .filter(m => {
+      const isOpponent = (m.senderId === opponentId && m.receiverId === state.currentUser.id) ||
+                         (m.senderId === state.currentUser.id && m.receiverId === opponentId);
+      if (!isOpponent) return false;
+      if (m.receiverId === state.currentUser.id && m.deletedByReceiver) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  const prevMsgCount = container.querySelectorAll('.dm-chat-row').length;
+
+  if (chatMessages.length === 0) {
+    container.innerHTML = `
+      <div class="dm-empty-state">
+        <i class="fa-regular fa-paper-plane"></i>
+        <span>대화 내역이 없습니다. 메시지를 보내 교류를 시작해 보세요!</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = "";
+  chatMessages.forEach(msg => {
+    const isSent = msg.senderId === state.currentUser.id;
+    const row = document.createElement('div');
+    row.className = `dm-chat-row ${isSent ? 'sent' : 'received'}`;
+
+    const dateObj = new Date(msg.createdAt);
+    let hour = dateObj.getHours();
+    const min = String(dateObj.getMinutes()).padStart(2, '0');
+    const ampm = hour >= 12 ? '오후' : '오전';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    const timeStr = `${ampm} ${hour}:${min}`;
+    
+    const showUnread = isSent && !msg.isRead;
+
+    row.innerHTML = `
+      <div class="dm-bubble-container">
+        <div class="dm-bubble">${escapeHtml(msg.message)}</div>
+        <div class="dm-bubble-meta">
+          ${showUnread ? `<span class="dm-unread-indicator">1</span>` : ''}
+          <span class="dm-bubble-time" title="${msg.createdAt.substring(0, 16).replace('T', ' ')}">${timeStr}</span>
+        </div>
+      </div>
+      <div class="dm-bubble-actions-row">
+        <button class="dm-bubble-action-btn btn-delete-chat" data-id="${msg.id}" title="${isSent ? '발송 취소 (양쪽 삭제)' : '삭제 (내 화면에서만 삭제)'}">
+          <i class="fa-solid fa-trash-can"></i> 삭제
+        </button>
       </div>
     `;
 
-    if (state.dmActiveSubTab === 'received') {
-      card.querySelector('.btn-reply-dm').addEventListener('click', () => {
-        openDmSendModal(msg.senderId, msg.senderName);
-      });
-    }
-
-    card.querySelector('.btn-delete-dm').addEventListener('click', () => {
-      handleDeleteDm(msg.id, state.dmActiveSubTab === 'sent');
+    row.querySelector('.btn-delete-chat').addEventListener('click', () => {
+      handleDeleteDm(msg.id, isSent);
     });
 
-    container.appendChild(card);
+    container.appendChild(row);
   });
+
+  if (forceScroll || wasAtBottom || chatMessages.length > prevMsgCount) {
+    container.scrollTop = container.scrollHeight;
+  } else {
+    container.scrollTop = previousScrollTop;
+  }
+}
+
+// 특정 대화 상대방의 메시지들 읽음 완료 처리
+async function markMessagesAsReadForOpponent(opponentId) {
+  if (!state.currentUser || state.currentUser.isGuest) return;
+
+  const targetMessages = state.messages.filter(m => m.senderId === opponentId && m.receiverId === state.currentUser.id && !m.isRead);
+  if (targetMessages.length === 0) return;
+
+  targetMessages.forEach(m => m.isRead = true);
+  localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('messages')
+        .update({ is_read: true })
+        .eq('sender_id', opponentId)
+        .eq('receiver_id', state.currentUser.id)
+        .eq('is_read', false);
+      if (error) throw error;
+    } catch (err) {
+      console.error(`Supabase DMs 읽음 업데이트 실패 (상대방: ${opponentId}):`, err);
+    }
+  }
+
+  state.dmUnreadCount = state.messages.filter(m => m.receiverId === state.currentUser.id && !m.isRead && !m.deletedByReceiver).length;
+  updateDmBadgeUI();
+}
+
+// 1:1 대화방 내에서 간이 답장 전송 처리
+async function handleSendDmReply() {
+  if (!state.currentUser || state.currentUser.isGuest) return;
+  if (!state.activeDmOpponentId) return;
+
+  const textInput = document.getElementById('dmChatReplyText');
+  if (!textInput) return;
+
+  const messageText = textInput.value.trim();
+  if (!messageText) return;
+
+  const opponentId = state.activeDmOpponentId;
+  const receiver = state.members.find(m => m.id === opponentId);
+  const receiverName = receiver ? receiver.name : (opponentId === 'admin' ? '운영진' : '알 수 없는 원우');
+
+  const now = new Date();
+  const nowStr = now.toISOString();
+
+  const newMsg = {
+    senderId: state.currentUser.id,
+    receiverId: opponentId,
+    senderName: state.currentUser.name,
+    receiverName: receiverName,
+    message: messageText,
+    isRead: false,
+    createdAt: nowStr,
+    deletedByReceiver: false
+  };
+
+  // 로컬 상태 추가
+  state.messages.unshift(newMsg);
+  localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+
+  // 즉시 화면 반영
+  renderDmInbox();
+
+  // 입력창 클리어
+  textInput.value = "";
+  const chatCharCount = document.getElementById('dmChatCharCount');
+  if (chatCharCount) chatCharCount.innerText = "0 / 500자";
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('messages')
+        .insert([{
+          sender_id: newMsg.senderId,
+          receiver_id: newMsg.receiverId,
+          sender_name: newMsg.senderName,
+          receiver_name: newMsg.receiverName,
+          message: newMsg.message,
+          is_read: false
+        }]);
+      if (error) throw error;
+      await syncDMs();
+      renderDmInbox();
+    } catch (err) {
+      console.error("Supabase DM 답장 전송 실패:", err);
+    }
+  } else {
+    renderDmInbox();
+  }
 }
 
 // 쪽지 삭제 처리 핸들러 (발신인 삭제 -> 영구삭제, 수신인 삭제 -> soft delete)
@@ -4761,7 +4999,7 @@ async function handleDeleteDm(messageId, isSender) {
   if (!confirm(confirmMsg)) return;
 
   if (isSender) {
-    // 발신인 삭제: DB에서 완벽하게 제거 (양쪽 다 삭제)
+    // 발신인 삭제: DB에서 완벽하게 제거
     state.messages = state.messages.filter(m => m.id !== messageId);
     localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
 
@@ -4800,7 +5038,7 @@ async function handleDeleteDm(messageId, isSender) {
           .eq('id', messageId);
         
         if (error) {
-          // 컬럼이 미생성 상태인 경우 fallback: 영구 삭제 처리하여 전체 시스템 구동 보장
+          // 컬럼이 미생성 상태인 경우 fallback
           const { error: fallbackError } = await supabaseClient
             .from('messages')
             .delete()
@@ -4981,10 +5219,8 @@ async function handleSendDmSubmit(e) {
 
   closeDmSendModal();
   
-  const inboxModal = document.getElementById('dmInboxModal');
-  if (inboxModal && !inboxModal.classList.contains('hidden')) {
-    switchDmTab('sent');
-  }
+  state.activeDmOpponentId = receiverId;
+  openDmInboxModal();
 }
 
 // ==================== 빠른 바로가기 (Quick Links) 기능 ====================
