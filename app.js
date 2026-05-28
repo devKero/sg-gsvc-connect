@@ -4712,7 +4712,7 @@ function renderAdminQuickLinks() {
     return;
   }
   
-  state.quickLinks.forEach(link => {
+  state.quickLinks.forEach((link, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(link.title)}</td>
@@ -4720,11 +4720,29 @@ function renderAdminQuickLinks() {
         <a href="${link.url}" target="_blank" style="text-decoration: underline; color: var(--color-sogang-gold);">${escapeHtml(link.url)}</a>
       </td>
       <td>
-        <button class="btn btn-light btn-sm admin-delete-link-btn" data-id="${link.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
+        <button class="btn btn-light btn-sm btn-up" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.2rem;" ${index === 0 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="btn btn-light btn-sm btn-down" style="padding: 0.3rem 0.5rem; font-size: 0.75rem; border-radius: 4px; margin-right: 0.5rem;" ${index === state.quickLinks.length - 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}>
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button class="btn btn-light btn-sm admin-delete-link-btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
           <i class="fa-solid fa-trash-can"></i> 삭제
         </button>
       </td>
     `;
+    
+    if (index > 0) {
+      tr.querySelector('.btn-up').addEventListener('click', () => {
+        handleMoveQuickLink(index, 'up');
+      });
+    }
+    
+    if (index < state.quickLinks.length - 1) {
+      tr.querySelector('.btn-down').addEventListener('click', () => {
+        handleMoveQuickLink(index, 'down');
+      });
+    }
     
     tr.querySelector('.admin-delete-link-btn').addEventListener('click', () => {
       handleDeleteQuickLink(link.id, link.title);
@@ -4732,6 +4750,49 @@ function renderAdminQuickLinks() {
     
     tbody.appendChild(tr);
   });
+}
+
+// 빠른 링크 순서 변경
+async function handleMoveQuickLink(currentIndex, direction) {
+  const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  if (targetIndex < 0 || targetIndex >= state.quickLinks.length) return;
+  
+  const currentLink = state.quickLinks[currentIndex];
+  const targetLink = state.quickLinks[targetIndex];
+  
+  // sort_order 스왑
+  const tempOrder = currentLink.sort_order;
+  currentLink.sort_order = targetLink.sort_order;
+  targetLink.sort_order = tempOrder;
+  
+  // 정렬 후 캐시 저장
+  state.quickLinks.sort((a, b) => a.sort_order - b.sort_order);
+  localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+  
+  // UI 선반영
+  renderQuickLinks();
+  renderAdminQuickLinks();
+  
+  // Supabase 서버 동기화
+  if (supabaseClient) {
+    try {
+      const update1 = supabaseClient
+        .from('quick_links')
+        .update({ sort_order: currentLink.sort_order })
+        .eq('id', currentLink.id);
+        
+      const update2 = supabaseClient
+        .from('quick_links')
+        .update({ sort_order: targetLink.sort_order })
+        .eq('id', targetLink.id);
+        
+      const [res1, res2] = await Promise.all([update1, update2]);
+      if (res1.error) throw res1.error;
+      if (res2.error) throw res2.error;
+    } catch (err) {
+      console.error("Supabase 퀵링크 순서 동기화 실패:", err);
+    }
+  }
 }
 
 // 빠른 링크 추가 제출
