@@ -1685,6 +1685,26 @@ function updateUserInfoUI() {
       sidebarChangePwBtnEl.classList.remove('hidden');
     }
   }
+
+  // 게스트(isGuest)인 경우 쪽지함 및 운영진 문의 버튼 숨김 처리
+  const btnDirectMessageInbox = document.getElementById('btnDirectMessageInbox');
+  const navInquiryBtn = document.getElementById('navInquiryBtn');
+  
+  if (btnDirectMessageInbox) {
+    if (user.isGuest) {
+      btnDirectMessageInbox.classList.add('hidden');
+    } else {
+      btnDirectMessageInbox.classList.remove('hidden');
+    }
+  }
+  
+  if (navInquiryBtn) {
+    if (user.isGuest) {
+      navInquiryBtn.classList.add('hidden');
+    } else {
+      navInquiryBtn.classList.remove('hidden');
+    }
+  }
 }
 
 // ==================== 탭 및 뷰 제어 스위치 ====================
