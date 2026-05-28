@@ -2474,7 +2474,7 @@ function openProfileModal(memberId) {
 
   const modalCommentAuthorInput = document.getElementById('modalCommentAuthor');
   if (state.currentUser) {
-    if (state.isAdmin) {
+    if (state.isSuperAdmin) {
       modalCommentAuthorInput.value = "운영진";
       modalCommentAuthorInput.disabled = true;
     } else if (state.currentUser.isGuest) {
