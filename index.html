@@ -86,6 +86,12 @@
       
       
       <div class="navbar-right">
+        <!-- 쪽지함 버튼 -->
+        <button id="btnDirectMessageInbox" class="nav-tab-btn" title="쪽지함" style="position: relative;">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span class="btn-text"> 쪽지함</span>
+          <span class="notif-badge hidden" id="dmUnreadBadge" style="position: absolute; top: -5px; right: -5px; background-color: var(--color-sogang); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 2px solid white;">0</span>
+        </button>
         <button id="navInquiryBtn" class="nav-tab-btn" title="운영진 문의 및 건의사항"><i class="fa-solid fa-envelope-open-text"></i><span class="btn-text"> 운영진 문의</span></button>
         <button id="navAdminTabBtn" class="nav-tab-btn hidden" title="운영 관리 대시보드"><i class="fa-solid fa-gear"></i><span class="btn-text"> 운영 관리</span></button>
         
@@ -178,6 +184,14 @@
             </div>
             <button id="clearFilterBtn" class="btn-clear-filter hidden" style="margin-top: 0.5rem;"><i class="fa-solid fa-rotate-left"></i> 필터 초기화</button>
           </div>
+
+          <!-- 빠른 바로가기 패널 -->
+          <div class="sidebar-card quick-links-panel">
+            <h4 style="margin-top: 0; margin-bottom: 0.6rem; font-size: 0.88rem; font-weight: 700; color: var(--color-text-main);"><i class="fa-solid fa-link" style="color: var(--color-sogang-gold); margin-right: 0.3rem;"></i> 빠른 바로가기</h4>
+            <div class="quick-links-list" id="quickLinksContainer" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem;">
+              <!-- JS 동적 렌더링 -->
+            </div>
+          </div>
           
           <!-- 사이드바 하단 정보 및 개인정보 처리방침 -->
           <div class="sidebar-footer" style="padding: 0.5rem; text-align: center; font-size: 0.72rem; color: var(--color-text-dim); margin-top: 1rem;">
@@ -256,6 +270,7 @@
         <div class="admin-tab-menu" style="display: flex; gap: 1rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1.5rem; padding-bottom: 0.15rem;">
           <button id="adminTabMembers" class="btn btn-sm" style="background: none; border: none; border-bottom: 3px solid var(--color-sogang); border-radius: 0; padding: 0.5rem 1rem; font-weight: 700; color: var(--color-sogang); cursor: pointer;">회원 관리</button>
           <button id="adminTabInquiries" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">건의 및 문의사항 (<span id="adminInquiryCount">0</span>)</button>
+          <button id="adminTabQuickLinks" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">빠른 링크 관리 (<span id="adminQuickLinksCount">0</span>)</button>
         </div>
 
         <!-- 멤버 관리 테이블 -->
@@ -346,6 +361,44 @@
           </div>
         </div>
 
+        <!-- 빠른 링크 관리 섹션 -->
+        <div id="adminQuickLinksSection" class="admin-table-section hidden">
+          <div class="admin-table-header">
+            <h3><i class="fa-solid fa-link"></i> 빠른 링크 관리</h3>
+          </div>
+
+          <!-- 링크 추가 폼 -->
+          <div style="background-color: #f8fafc; border: 1px solid var(--color-border); padding: 1.2rem; border-radius: var(--radius-md); margin: 0 1.5rem 1.5rem 1.5rem;">
+            <h4 style="margin-top: 0; margin-bottom: 0.8rem; font-size: 0.9rem; font-weight: 700; color: var(--color-text-main);">새 바로가기 링크 추가</h4>
+            <form id="adminAddQuickLinkForm" style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: flex-end;">
+              <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                <label for="newLinkTitle" style="font-size: 0.75rem;">링크 이름 (예: SAINT)</label>
+                <input type="text" id="newLinkTitle" required placeholder="링크 이름 입력" style="font-size: 0.8rem; padding: 0.4rem 0.6rem; border: 1px solid var(--color-border); border-radius: 4px; width: 100%;">
+              </div>
+              <div class="form-group" style="flex: 2; min-width: 250px; margin-bottom: 0;">
+                <label for="newLinkUrl" style="font-size: 0.75rem;">링크 URL (http:// 또는 https:// 포함)</label>
+                <input type="url" id="newLinkUrl" required placeholder="https://example.com" style="font-size: 0.8rem; padding: 0.4rem 0.6rem; border: 1px solid var(--color-border); border-radius: 4px; width: 100%;">
+              </div>
+              <button type="submit" class="btn btn-sogang" style="height: 36px; padding: 0 1.2rem; border-radius: 4px; font-weight: 700; flex-shrink: 0;"><i class="fa-solid fa-plus"></i> 추가</button>
+            </form>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="admin-member-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 200px;">링크 이름</th>
+                  <th>링크 URL</th>
+                  <th style="width: 100px;">관리</th>
+                </tr>
+              </thead>
+              <tbody id="adminQuickLinksTableBody">
+                <!-- JS 동적 렌더링 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -367,6 +420,7 @@
               <div class="name-edit-row">
                 <h2 id="modalName">김서강</h2>
                 <button id="editProfileBtn" class="btn-edit-profile hidden" title="프로필 수정"><i class="fa-solid fa-pen"></i> 프로필 수정</button>
+                <button id="btnProfileSendDm" class="btn btn-sogang btn-sm" style="border-radius: 4px; font-weight: 700; margin-left: 0.5rem; padding: 0.2rem 0.5rem; font-size: 0.72rem; display: none;"><i class="fa-solid fa-paper-plane"></i> 쪽지 보내기</button>
               </div>
               <p id="modalClass" class="modal-class">26학번 / 메타버스 전공</p>
               <p id="modalHeadline" class="modal-headline">한 줄 관심사 헤드라인</p>
@@ -860,6 +914,66 @@
             </button>
             <button type="button" id="btnCancelAdminReply" class="btn btn-light">취소</button>
             <button type="submit" class="btn btn-sogang">답변 등록 및 저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 쪽지함 모달 ==================== -->
+  <div id="dmInboxModal" class="modal-overlay hidden" role="dialog" aria-modal="true" style="z-index: 1060;">
+    <div class="modal-card" style="max-width: 650px; width: 95%;">
+      <button id="closeDmInboxModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 1.5rem; max-height: 85vh; display: flex; flex-direction: column;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.5rem; flex-shrink: 0;">
+          <i class="fa-solid fa-paper-plane" style="color: var(--color-sogang);"></i> 원우 쪽지함
+          <button id="btnRefreshDm" class="btn btn-light btn-sm" title="새로고침" style="margin-left: auto; padding: 0.2rem 0.5rem; font-size: 0.75rem;"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+        </h2>
+        
+        <!-- 쪽지함 서브 탭 -->
+        <div class="admin-sub-tab-menu" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--color-border); margin-bottom: 1rem; flex-shrink: 0; padding: 0 0 0.5rem 0;">
+          <button id="dmTabReceived" class="btn btn-sm" style="background: none; border: none; border-bottom: 3px solid var(--color-sogang); border-radius: 0; padding: 0.4rem 0.8rem; font-weight: 700; color: var(--color-sogang); cursor: pointer;">
+            받은 쪽지함
+          </button>
+          <button id="dmTabSent" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.4rem 0.8rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">
+            보낸 쪽지함
+          </button>
+          <button id="btnOpenSendDmFromInbox" class="btn btn-sogang btn-sm" style="margin-left: auto; border-radius: 4px; font-weight: 700;"><i class="fa-solid fa-pen-to-square"></i> 새 쪽지 작성</button>
+        </div>
+
+        <!-- 쪽지 리스트 컨테이너 -->
+        <div id="dmListContainer" style="flex: 1; overflow-y: auto; min-height: 250px; max-height: 400px; display: flex; flex-direction: column; gap: 0.8rem; padding-right: 0.2rem;">
+          <!-- 쪽지 리스트가 동적으로 렌더링됩니다 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 쪽지 보내기 모달 ==================== -->
+  <div id="dmSendModal" class="modal-overlay hidden" role="dialog" aria-modal="true" style="z-index: 1065;">
+    <div class="modal-card" style="max-width: 500px; width: 95%;">
+      <button id="closeDmSendModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 1.5rem;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.5rem;">
+          <i class="fa-solid fa-paper-plane" style="color: var(--color-sogang);"></i> 쪽지 보내기
+        </h2>
+        
+        <form id="dmSendForm" style="display: flex; flex-direction: column; gap: 0.8rem;">
+          <div class="form-group">
+            <label for="dmReceiverSelect">받는 사람</label>
+            <select id="dmReceiverSelect" required style="width: 100%; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--color-border); cursor: pointer;">
+              <!-- 활성 회원 목록이 동적으로 들어갑니다 -->
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="dmMessageText">쪽지 내용</label>
+            <textarea id="dmMessageText" rows="6" required maxlength="500" placeholder="전달할 내용을 기재해 주세요... (최대 500자)" style="font-family: var(--font-body); font-size: 0.85rem; padding: 0.6rem; border-radius: 4px; border: 1px solid var(--color-border); resize: none;"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+            <button type="button" id="btnCancelSendDm" class="btn btn-light">취소</button>
+            <button type="submit" class="btn btn-sogang">쪽지 보내기</button>
           </div>
         </form>
       </div>

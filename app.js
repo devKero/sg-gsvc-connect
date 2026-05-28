@@ -42,7 +42,11 @@ let state = {
   notifications: [],        // 내 프로필에 달린 알림 목록
   unreadNotifCount: 0,      // 미확인 알림 수
   inquiries: [],           // 문의/건의 데이터
-  adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries')
+  messages: [],            // 쪽지함 데이터
+  quickLinks: [],           // 퀵링크 데이터
+  dmUnreadCount: 0,        // 안 읽은 쪽지 개수
+  dmActiveSubTab: 'received', // 쪽지함 하위 탭 ('received', 'sent')
+  adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries', 'quick_links')
   adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
   adminMemberSubTab: 'active'  // 어드민 회원 하위 탭 ('active', 'trash')
 };
@@ -464,10 +468,60 @@ async function syncWithSupabase() {
       createdAt: i.created_at
     }));
     localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+    // 4. quick_links 테이블 데이터 조회
+    let dbQuickLinks = [];
+    try {
+      const { data, error } = await supabaseClient
+        .from('quick_links')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      dbQuickLinks = data || [];
+    } catch (err) {
+      console.warn("quick_links 테이블 로드 실패:", err);
+      const cached = localStorage.getItem('sogang_unity_quicklinks');
+      if (cached) dbQuickLinks = JSON.parse(cached);
+    }
+    state.quickLinks = dbQuickLinks;
+    localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+
     console.log("Supabase 클라우드 데이터베이스와 양방향 동기화 완료.");
   } catch (err) {
     console.error("Supabase 데이터 연동 실패 (로컬 스토리지 오프라인 모드 유지):", err);
+    const cachedLinks = localStorage.getItem('sogang_unity_quicklinks');
+    if (cachedLinks) {
+      state.quickLinks = JSON.parse(cachedLinks);
+    } else {
+      state.quickLinks = [
+        { id: 1, title: '서강대학교', url: 'https://www.sogang.ac.kr', sort_order: 1 },
+        { id: 2, title: '세인트 (SAINT)', url: 'https://saint.sogang.ac.kr', sort_order: 2 },
+        { id: 3, title: '메타버스전문대학원', url: 'https://gsmeta.sogang.ac.kr', sort_order: 3 }
+      ];
+      localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+    }
   }
+
+  // 로컬 스토리지 모드 전용 기본 퀵링크 셋업
+  if (!supabaseClient) {
+    const cachedLinks = localStorage.getItem('sogang_unity_quicklinks');
+    if (cachedLinks) {
+      state.quickLinks = JSON.parse(cachedLinks);
+    } else {
+      state.quickLinks = [
+        { id: 1, title: '서강대학교', url: 'https://www.sogang.ac.kr', sort_order: 1 },
+        { id: 2, title: '세인트 (SAINT)', url: 'https://saint.sogang.ac.kr', sort_order: 2 },
+        { id: 3, title: '메타버스전문대학원', url: 'https://gsmeta.sogang.ac.kr', sort_order: 3 }
+      ];
+      localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+    }
+  }
+
+  // 퀵링크 렌더링
+  renderQuickLinks();
+
+  // 쪽지 안 읽은 수 알림 갱신
+  updateDmUnreadCount();
   
   // 알림 갱신
   updateNotifications();
@@ -1155,6 +1209,83 @@ function setupEventListeners() {
   const adminMemTabTrash = document.getElementById('adminMemTabTrash');
   if (adminMemTabTrash) {
     adminMemTabTrash.addEventListener('click', () => switchAdminMemberSubTab('trash'));
+  }
+
+  // --- 빠른 바로가기 및 DM 관련 리스너 ---
+  const adminTabQuickLinks = document.getElementById('adminTabQuickLinks');
+  if (adminTabQuickLinks) {
+    adminTabQuickLinks.addEventListener('click', () => switchAdminActiveTab('quick_links'));
+  }
+  const adminAddQuickLinkForm = document.getElementById('adminAddQuickLinkForm');
+  if (adminAddQuickLinkForm) {
+    adminAddQuickLinkForm.addEventListener('submit', handleAddQuickLinkSubmit);
+  }
+
+  // 쪽지함 버튼 클릭
+  const btnDirectMessageInbox = document.getElementById('btnDirectMessageInbox');
+  if (btnDirectMessageInbox) {
+    btnDirectMessageInbox.addEventListener('click', openDmInboxModal);
+  }
+  // 쪽지함 닫기 버튼 클릭
+  const closeDmInboxModalBtn = document.getElementById('closeDmInboxModalBtn');
+  if (closeDmInboxModalBtn) {
+    closeDmInboxModalBtn.addEventListener('click', closeDmInboxModal);
+  }
+  // 쪽지함 모달 바깥 영역 클릭 시 닫기
+  const dmInboxModal = document.getElementById('dmInboxModal');
+  if (dmInboxModal) {
+    dmInboxModal.addEventListener('click', (e) => {
+      if (e.target.id === 'dmInboxModal') closeDmInboxModal();
+    });
+  }
+  // 쪽지함 탭 클릭
+  const dmTabReceived = document.getElementById('dmTabReceived');
+  if (dmTabReceived) {
+    dmTabReceived.addEventListener('click', () => switchDmTab('received'));
+  }
+  const dmTabSent = document.getElementById('dmTabSent');
+  if (dmTabSent) {
+    dmTabSent.addEventListener('click', () => switchDmTab('sent'));
+  }
+  // 쪽지함 새로고침
+  const btnRefreshDm = document.getElementById('btnRefreshDm');
+  if (btnRefreshDm) {
+    btnRefreshDm.addEventListener('click', () => {
+      syncDMs().then(renderDmInbox);
+    });
+  }
+  // 쪽지 작성 모달 닫기
+  const closeDmSendModalBtn = document.getElementById('closeDmSendModalBtn');
+  if (closeDmSendModalBtn) {
+    closeDmSendModalBtn.addEventListener('click', closeDmSendModal);
+  }
+  const btnCancelSendDm = document.getElementById('btnCancelSendDm');
+  if (btnCancelSendDm) {
+    btnCancelSendDm.addEventListener('click', closeDmSendModal);
+  }
+  // 쪽지 보내기 서브밋
+  const dmSendForm = document.getElementById('dmSendForm');
+  if (dmSendForm) {
+    dmSendForm.addEventListener('submit', handleSendDmSubmit);
+  }
+  // 쪽지함 내에서 쓰기 버튼 클릭
+  const btnOpenSendDmFromInbox = document.getElementById('btnOpenSendDmFromInbox');
+  if (btnOpenSendDmFromInbox) {
+    btnOpenSendDmFromInbox.addEventListener('click', () => {
+      openDmSendModal();
+    });
+  }
+  // 회원 상세 보기 내 쪽지 보내기 버튼 클릭
+  const btnProfileSendDm = document.getElementById('btnProfileSendDm');
+  if (btnProfileSendDm) {
+    btnProfileSendDm.addEventListener('click', () => {
+      if (state.selectedMemberId) {
+        const targetMember = state.members.find(m => m.id === state.selectedMemberId);
+        if (targetMember) {
+          openDmSendModal(state.selectedMemberId, targetMember.name);
+        }
+      }
+    });
   }
 
   // --- 개인정보 처리방침 모달 관련 리스너 ---
@@ -2038,6 +2169,16 @@ function openProfileModal(memberId) {
   state.selectedMemberId = memberId;
   const member = state.members.find(m => m.id === memberId);
   if (!member) return;
+
+  // 쪽지 보내기 버튼 제어 (자기 자신이나 비로그인 게스트인 경우는 숨김, 타인일 때 노출)
+  const sendDmBtn = document.getElementById('btnProfileSendDm');
+  if (sendDmBtn) {
+    if (state.currentUser && !state.currentUser.isGuest && state.currentUser.id !== memberId) {
+      sendDmBtn.style.display = 'inline-block';
+    } else {
+      sendDmBtn.style.display = 'none';
+    }
+  }
 
   // 운영진 여부에 따라 기본 학적 정보 수정 필드 노출 토글
   const adminFieldsEl = document.getElementById('editAdminOnlyFields');
@@ -3822,21 +3963,32 @@ function switchAdminActiveTab(tab) {
   state.adminActiveTab = tab;
   const tabMembers = document.getElementById('adminTabMembers');
   const tabInquiries = document.getElementById('adminTabInquiries');
+  const tabQuickLinks = document.getElementById('adminTabQuickLinks');
+  
   const secMembers = document.getElementById('adminMembersSection');
   const secInquiries = document.getElementById('adminInquirySection');
+  const secQuickLinks = document.getElementById('adminQuickLinksSection');
+
+  if (tabMembers) tabMembers.classList.remove('active-tab');
+  if (tabInquiries) tabInquiries.classList.remove('active-tab');
+  if (tabQuickLinks) tabQuickLinks.classList.remove('active-tab');
+
+  if (secMembers) secMembers.classList.add('hidden');
+  if (secInquiries) secInquiries.classList.add('hidden');
+  if (secQuickLinks) secQuickLinks.classList.add('hidden');
 
   if (tab === 'members') {
-    tabMembers.classList.add('active-tab');
-    tabInquiries.classList.remove('active-tab');
-    secMembers.classList.remove('hidden');
-    secInquiries.classList.add('hidden');
+    if (tabMembers) tabMembers.classList.add('active-tab');
+    if (secMembers) secMembers.classList.remove('hidden');
     renderAdminDashboard();
-  } else {
-    tabInquiries.classList.add('active-tab');
-    tabMembers.classList.remove('active-tab');
-    secInquiries.classList.remove('hidden');
-    secMembers.classList.add('hidden');
+  } else if (tab === 'inquiries') {
+    if (tabInquiries) tabInquiries.classList.add('active-tab');
+    if (secInquiries) secInquiries.classList.remove('hidden');
     renderAdminInquiries();
+  } else if (tab === 'quick_links') {
+    if (tabQuickLinks) tabQuickLinks.classList.add('active-tab');
+    if (secQuickLinks) secQuickLinks.classList.remove('hidden');
+    renderAdminQuickLinks();
   }
 }
 
@@ -4082,5 +4234,502 @@ async function deleteInquiry(inquiryId) {
     alert("로컬 스토리지 모드: 문의가 삭제되었습니다.");
     closeAdminInquiryModal();
     renderAdminInquiries();
+  }
+}
+
+// ==================== 쪽지(Direct Message) 시스템 기능 ====================
+
+// 로그인 원우의 안 읽은 쪽지 개수 갱신
+async function updateDmUnreadCount() {
+  if (!state.currentUser || state.currentUser.isGuest) {
+    state.dmUnreadCount = 0;
+    updateDmBadgeUI();
+    return;
+  }
+  
+  if (supabaseClient) {
+    try {
+      const { count, error } = await supabaseClient
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', state.currentUser.id)
+        .eq('is_read', false);
+      if (error) throw error;
+      state.dmUnreadCount = count || 0;
+    } catch (err) {
+      console.warn("Supabase 안 읽은 쪽지 조회 실패 (messages 테이블 미생성 상태일 수 있음):", err);
+      const cached = localStorage.getItem('sogang_unity_messages');
+      if (cached) {
+        const msgs = JSON.parse(cached);
+        state.dmUnreadCount = msgs.filter(m => m.receiverId === state.currentUser.id && !m.isRead).length;
+      }
+    }
+  } else {
+    const cached = localStorage.getItem('sogang_unity_messages');
+    if (cached) {
+      const msgs = JSON.parse(cached);
+      state.dmUnreadCount = msgs.filter(m => m.receiverId === state.currentUser.id && !m.isRead).length;
+    }
+  }
+  updateDmBadgeUI();
+}
+
+function updateDmBadgeUI() {
+  const badge = document.getElementById('dmUnreadBadge');
+  if (badge) {
+    if (state.dmUnreadCount > 0) {
+      badge.innerText = String(state.dmUnreadCount);
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+// 쪽지함 동기화 (온디맨드 호출)
+async function syncDMs() {
+  if (!state.currentUser || state.currentUser.isGuest) return;
+  
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${state.currentUser.id},receiver_id.eq.${state.currentUser.id}`)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      
+      state.messages = (data || []).map(m => ({
+        id: m.id,
+        senderId: m.sender_id,
+        receiverId: m.receiver_id,
+        senderName: m.sender_name,
+        receiverName: m.receiver_name,
+        message: m.message,
+        isRead: m.is_read,
+        createdAt: m.created_at
+      }));
+      localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+    } catch (err) {
+      console.error("Supabase DMs 동기화 실패 (로컬 스토리지 모드 실행):", err);
+      const cached = localStorage.getItem('sogang_unity_messages');
+      if (cached) state.messages = JSON.parse(cached);
+    }
+  } else {
+    const cached = localStorage.getItem('sogang_unity_messages');
+    if (cached) state.messages = JSON.parse(cached);
+  }
+  
+  state.dmUnreadCount = state.messages.filter(m => m.receiverId === state.currentUser.id && !m.isRead).length;
+  updateDmBadgeUI();
+}
+
+// 받은 쪽지 읽음 완료 처리
+async function markMessagesAsRead() {
+  if (!state.currentUser || state.currentUser.isGuest) return;
+  
+  const unreadDMs = state.messages.filter(m => m.receiverId === state.currentUser.id && !m.isRead);
+  if (unreadDMs.length === 0) return;
+  
+  unreadDMs.forEach(m => m.isRead = true);
+  localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+  
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('messages')
+        .update({ is_read: true })
+        .eq('receiver_id', state.currentUser.id)
+        .eq('is_read', false);
+      if (error) throw error;
+    } catch (err) {
+      console.error("Supabase DMs 읽음 업데이트 실패:", err);
+    }
+  }
+  
+  state.dmUnreadCount = 0;
+  updateDmBadgeUI();
+}
+
+// 쪽지함 모달 제어
+function openDmInboxModal() {
+  if (!state.currentUser || state.currentUser.isGuest) {
+    alert("로그인 후 쪽지함을 이용할 수 있습니다.");
+    return;
+  }
+  state.dmActiveSubTab = 'received';
+  const modal = document.getElementById('dmInboxModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  
+  const tabRec = document.getElementById('dmTabReceived');
+  const tabSent = document.getElementById('dmTabSent');
+  if (tabRec && tabSent) {
+    tabRec.style.borderBottom = '3px solid var(--color-sogang)';
+    tabRec.style.fontWeight = '700';
+    tabRec.style.color = 'var(--color-sogang)';
+    tabSent.style.borderBottom = 'none';
+    tabSent.style.fontWeight = '500';
+    tabSent.style.color = 'var(--color-text-sub)';
+  }
+  
+  syncDMs().then(() => {
+    renderDmInbox();
+    markMessagesAsRead();
+  });
+}
+
+function closeDmInboxModal() {
+  const modal = document.getElementById('dmInboxModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
+
+function switchDmTab(tab) {
+  state.dmActiveSubTab = tab;
+  const tabRec = document.getElementById('dmTabReceived');
+  const tabSent = document.getElementById('dmTabSent');
+  if (!tabRec || !tabSent) return;
+
+  if (tab === 'received') {
+    tabRec.style.borderBottom = '3px solid var(--color-sogang)';
+    tabRec.style.fontWeight = '700';
+    tabRec.style.color = 'var(--color-sogang)';
+    tabSent.style.borderBottom = 'none';
+    tabSent.style.fontWeight = '500';
+    tabSent.style.color = 'var(--color-text-sub)';
+    markMessagesAsRead();
+  } else {
+    tabSent.style.borderBottom = '3px solid var(--color-sogang)';
+    tabSent.style.fontWeight = '700';
+    tabSent.style.color = 'var(--color-sogang)';
+    tabRec.style.borderBottom = 'none';
+    tabRec.style.fontWeight = '500';
+    tabRec.style.color = 'var(--color-text-sub)';
+  }
+  renderDmInbox();
+}
+
+function renderDmInbox() {
+  const container = document.getElementById('dmListContainer');
+  if (!container) return;
+  container.innerHTML = "";
+
+  let filtered = [];
+  if (state.dmActiveSubTab === 'received') {
+    filtered = state.messages.filter(m => m.receiverId === state.currentUser.id);
+  } else {
+    filtered = state.messages.filter(m => m.senderId === state.currentUser.id);
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="dm-empty-state">
+        <i class="fa-regular fa-paper-plane"></i>
+        <span>쪽지 내역이 존재하지 않습니다.</span>
+      </div>
+    `;
+    return;
+  }
+
+  filtered.forEach(msg => {
+    const card = document.createElement('div');
+    card.className = `dm-card ${(!msg.isRead && msg.receiverId === state.currentUser.id) ? 'unread' : ''}`;
+    
+    const oppositeName = state.dmActiveSubTab === 'received' ? msg.senderName : msg.receiverName;
+    const labelPrefix = state.dmActiveSubTab === 'received' ? "보낸사람" : "받는사람";
+    const formattedDate = msg.createdAt ? msg.createdAt.substring(0, 16).replace('T', ' ') : '-';
+
+    card.innerHTML = `
+      <div class="dm-header">
+        <div class="dm-sender-info">
+          <i class="fa-solid fa-user" style="font-size:0.75rem; color:var(--color-text-sub);"></i>
+          <span>${labelPrefix}: <strong>${escapeHtml(oppositeName)}</strong></span>
+          ${(!msg.isRead && msg.receiverId === state.currentUser.id) ? '<span class="dm-unread-badge-dot" title="읽지 않은 쪽지"></span>' : ''}
+        </div>
+        <span class="dm-time">${formattedDate}</span>
+      </div>
+      <div class="dm-message-body">${escapeHtml(msg.message)}</div>
+      ${state.dmActiveSubTab === 'received' ? `
+        <div style="display:flex; justify-content:flex-end; margin-top:0.2rem; flex-shrink:0;">
+          <button class="btn btn-light btn-sm btn-reply-dm" data-sender-id="${msg.senderId}" data-sender-name="${msg.senderName}" style="padding:0.15rem 0.4rem; font-size:0.7rem; border-radius:4px; font-weight:700;"><i class="fa-solid fa-reply"></i> 답장하기</button>
+        </div>
+      ` : ''}
+    `;
+
+    if (state.dmActiveSubTab === 'received') {
+      card.querySelector('.btn-reply-dm').addEventListener('click', () => {
+        openDmSendModal(msg.senderId, msg.senderName);
+      });
+    }
+
+    container.appendChild(card);
+  });
+}
+
+// 쪽지 전송 모달 제어
+function openDmSendModal(receiverId = "", receiverName = "") {
+  if (!state.currentUser || state.currentUser.isGuest) {
+    alert("로그인 후 쪽지를 보낼 수 있습니다.");
+    return;
+  }
+  
+  const modal = document.getElementById('dmSendModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  
+  const select = document.getElementById('dmReceiverSelect');
+  if (select) {
+    select.innerHTML = "";
+    
+    const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted');
+    
+    activeMembers.sort((a, b) => {
+      const genA = a.generation || 999;
+      const genB = b.generation || 999;
+      if (genA !== genB) return genA - genB;
+      return a.name.localeCompare(b.name);
+    });
+    
+    activeMembers.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.innerText = `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${escapeHtml(m.studentId)})`;
+      select.appendChild(opt);
+    });
+    
+    if (receiverId) {
+      select.value = receiverId;
+    }
+  }
+  
+  document.getElementById('dmMessageText').value = "";
+}
+
+function closeDmSendModal() {
+  const modal = document.getElementById('dmSendModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+// 쪽지 전송 서브밋 핸들러
+async function handleSendDmSubmit(e) {
+  e.preventDefault();
+  if (!state.currentUser || state.currentUser.isGuest) return;
+
+  const receiverId = document.getElementById('dmReceiverSelect').value;
+  const messageText = document.getElementById('dmMessageText').value.trim();
+
+  if (!receiverId) {
+    alert("받는 사람을 선택해 주세요.");
+    return;
+  }
+  if (!messageText) {
+    alert("쪽지 내용을 입력해 주세요.");
+    return;
+  }
+
+  const receiver = state.members.find(m => m.id === receiverId);
+  if (!receiver) {
+    alert("존재하지 않는 회원입니다.");
+    return;
+  }
+
+  const now = new Date();
+  const nowStr = now.toISOString();
+
+  const newMsg = {
+    senderId: state.currentUser.id,
+    receiverId: receiverId,
+    senderName: state.currentUser.name,
+    receiverName: receiver.name,
+    message: messageText,
+    isRead: false,
+    createdAt: nowStr
+  };
+
+  // 로컬 상태 추가
+  state.messages.unshift(newMsg);
+  localStorage.setItem('sogang_unity_messages', JSON.stringify(state.messages));
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('messages')
+        .insert([{
+          sender_id: newMsg.senderId,
+          receiver_id: newMsg.receiverId,
+          sender_name: newMsg.senderName,
+          receiver_name: newMsg.receiverName,
+          message: newMsg.message,
+          is_read: false
+        }]);
+      if (error) throw error;
+      alert("쪽지가 정상적으로 전송되었습니다.");
+    } catch (err) {
+      console.error("Supabase DM 전송 실패:", err);
+      alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 보관됩니다)");
+    }
+  } else {
+    alert("로컬 스토리지 모드: 쪽지가 전송되었습니다.");
+  }
+
+  closeDmSendModal();
+  
+  const inboxModal = document.getElementById('dmInboxModal');
+  if (inboxModal && !inboxModal.classList.contains('hidden')) {
+    switchDmTab('sent');
+  }
+}
+
+// ==================== 빠른 바로가기 (Quick Links) 기능 ====================
+
+// 메인 사이드바 링크 렌더링
+function renderQuickLinks() {
+  const container = document.getElementById('quickLinksContainer');
+  if (!container) return;
+  container.innerHTML = "";
+  
+  if (!state.quickLinks || state.quickLinks.length === 0) {
+    container.innerHTML = `<span style="font-size:0.75rem; color:var(--color-text-dim);">등록된 바로가기가 없습니다.</span>`;
+    return;
+  }
+  
+  state.quickLinks.forEach(link => {
+    const chip = document.createElement('a');
+    chip.className = 'quick-link-chip';
+    chip.href = link.url;
+    chip.target = '_blank';
+    chip.innerHTML = `<i class="fa-solid fa-link"></i> ${escapeHtml(link.title)}`;
+    container.appendChild(chip);
+  });
+}
+
+// 어드민 탭 리스트 테이블 렌더링
+function renderAdminQuickLinks() {
+  const tbody = document.getElementById('adminQuickLinksTableBody');
+  const countEl = document.getElementById('adminQuickLinksCount');
+  if (countEl) {
+    countEl.innerText = String(state.quickLinks ? state.quickLinks.length : 0);
+  }
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  
+  if (!state.quickLinks || state.quickLinks.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; color: var(--color-text-dim); padding: 2rem;">
+          등록된 빠른 바로가기 링크가 없습니다.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  state.quickLinks.forEach(link => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(link.title)}</td>
+      <td style="color: var(--color-text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;">
+        <a href="${link.url}" target="_blank" style="text-decoration: underline; color: var(--color-sogang-gold);">${escapeHtml(link.url)}</a>
+      </td>
+      <td>
+        <button class="btn btn-light btn-sm admin-delete-link-btn" data-id="${link.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
+          <i class="fa-solid fa-trash-can"></i> 삭제
+        </button>
+      </td>
+    `;
+    
+    tr.querySelector('.admin-delete-link-btn').addEventListener('click', () => {
+      handleDeleteQuickLink(link.id, link.title);
+    });
+    
+    tbody.appendChild(tr);
+  });
+}
+
+// 빠른 링크 추가 제출
+async function handleAddQuickLinkSubmit(e) {
+  e.preventDefault();
+  const titleInput = document.getElementById('newLinkTitle');
+  const urlInput = document.getElementById('newLinkUrl');
+  
+  const title = titleInput.value.trim();
+  const url = urlInput.value.trim();
+  
+  if (!title || !url) return;
+  
+  if (state.quickLinks.some(l => l.title === title)) {
+    alert("이미 존재하는 링크 이름입니다.");
+    return;
+  }
+  
+  const newLink = {
+    id: Date.now(),
+    title,
+    url,
+    sort_order: state.quickLinks.length + 1
+  };
+  
+  state.quickLinks.push(newLink);
+  localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+  
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('quick_links')
+        .insert([{ title, url, sort_order: newLink.sort_order }])
+        .select();
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        newLink.id = data[0].id;
+        localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+      }
+      alert("새 빠른 링크가 등록되었습니다.");
+    } catch (err) {
+      console.error("Supabase 퀵링크 등록 에러:", err);
+      alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+    }
+  } else {
+    alert("로컬 스토리지 모드: 새 빠른 링크가 등록되었습니다.");
+  }
+  
+  titleInput.value = "";
+  urlInput.value = "";
+  
+  renderQuickLinks();
+  renderAdminQuickLinks();
+}
+
+// 빠른 링크 삭제
+async function handleDeleteQuickLink(linkId, title) {
+  if (confirm(`정말로 [${title}] 빠른 링크를 삭제하시겠습니까?`)) {
+    state.quickLinks = state.quickLinks.filter(l => l.id !== linkId);
+    localStorage.setItem('sogang_unity_quicklinks', JSON.stringify(state.quickLinks));
+    
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('quick_links')
+          .delete()
+          .eq('id', linkId);
+        if (error) throw error;
+        alert("링크가 성공적으로 삭제되었습니다.");
+      } catch (err) {
+        console.error("Supabase 퀵링크 삭제 실패:", err);
+        alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+      }
+    } else {
+      alert("링크가 삭제되었습니다.");
+    }
+    
+    renderQuickLinks();
+    renderAdminQuickLinks();
   }
 }
