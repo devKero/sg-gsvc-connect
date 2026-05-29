@@ -3921,10 +3921,10 @@ a {
 
 /* 테마 전환 버튼 */
 .btn-theme-toggle {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 1.1rem;
+  background-color: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-main);
+  font-size: 1.05rem;
   cursor: pointer;
   padding: 0.45rem;
   border-radius: 50%;
@@ -3932,15 +3932,13 @@ a {
   align-items: center;
   justify-content: center;
   transition: var(--transition);
-  width: 34px;
-  height: 34px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 36px;
+  height: 36px;
 }
 
 .btn-theme-toggle:hover {
-  background-color: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  background-color: var(--color-border);
+  color: var(--color-text-main);
   transform: rotate(15deg);
 }
 
@@ -3992,15 +3990,15 @@ html[data-theme="dark"] .alert-danger {
   color: #ef4444;
 }
 
-/* 모바일 헤더 뷰 토글 버튼 다크모드 대응 */
+/* 테마 토글 버튼 다크모드 대응 */
 html[data-theme="dark"] .btn-theme-toggle {
   color: var(--color-sogang-gold);
-  background-color: rgba(197, 160, 89, 0.1);
-  border-color: rgba(197, 160, 89, 0.2);
+  background-color: var(--color-bg-input);
+  border-color: var(--color-border);
 }
 
 html[data-theme="dark"] .btn-theme-toggle:hover {
-  background-color: rgba(197, 160, 89, 0.25);
+  background-color: var(--color-border);
   color: #ffffff;
 }
 
