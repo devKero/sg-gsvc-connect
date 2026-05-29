@@ -912,10 +912,6 @@ function setupEventListeners() {
   document.getElementById('modalCommentForm').addEventListener('submit', handleModalCommentSubmit);
 
   // --- 운영진 모드 관련 이벤트 ---
-  const openAddMemberBtn = document.getElementById('openAddMemberModalBtn');
-  if (openAddMemberBtn) {
-    openAddMemberBtn.addEventListener('click', openAddMemberModal);
-  }
   const sidebarEditBtn = document.getElementById('sidebarEditProfileBtn');
   if (sidebarEditBtn) {
     sidebarEditBtn.addEventListener('click', () => {
@@ -1753,7 +1749,6 @@ function updateUserInfoUI() {
     }
   }
   
-  const openAddBtn = document.getElementById('openAddMemberModalBtn');
   if (state.isAdmin) {
     if (state.isSuperAdmin) {
       headlineEl.innerText = "디렉토리 최고 시스템 운영진 계정입니다.";
@@ -1761,10 +1756,8 @@ function updateUserInfoUI() {
       headlineEl.innerText = "디렉토리 부운영진 계정입니다.";
     }
     if (adminPanelEl) adminPanelEl.classList.remove('hidden');
-    if (openAddBtn) openAddBtn.classList.remove('hidden');
   } else {
     if (adminPanelEl) adminPanelEl.classList.add('hidden');
-    if (openAddBtn) openAddBtn.classList.add('hidden');
     if (user.isGuest) {
       headlineEl.innerText = "프로필을 직접 등록하고 편집하고 싶다면 학번으로 로그인해 주세요.";
     } else {
@@ -2317,11 +2310,6 @@ function renderMembersGrid(resetLimit = false) {
     const snsOnlyIconsHtml = getSnsLinksCardHtml(member.snsLinks);
 
     card.innerHTML = `
-      ${state.isAdmin ? `
-        <button class="card-delete-btn" data-id="${member.id}" title="원우 삭제">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      ` : ''}
       <div class="card-banner"></div>
       <div class="card-avatar" style="background-color: ${avatarBg};">
         ${member.avatarImage ? `<img src="${member.avatarImage}" alt="${escapeHtml(member.name)}">` : member.name[0]}
@@ -2366,14 +2354,6 @@ function renderMembersGrid(resetLimit = false) {
       });
     });
 
-    // 운영진 멤버 삭제 단추 이벤트
-    if (state.isAdmin) {
-      card.querySelector('.card-delete-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        handleDeleteMember(member.id, member.name);
-      });
-    }
-
     // 상세 보기 버튼 클릭
     card.querySelector('.btn-view-profile').addEventListener('click', () => {
       openProfileModal(member.id);
@@ -2383,7 +2363,7 @@ function renderMembersGrid(resetLimit = false) {
     card.style.cursor = 'pointer';
     card.addEventListener('click', (e) => {
       // 카드 내부 인터랙티브 요소 클릭 시에는 무시
-      if (e.target.closest('.card-delete-btn, .copy-email-btn, .contact-icon, .btn-view-profile, a')) return;
+      if (e.target.closest('.copy-email-btn, .contact-icon, .btn-view-profile, a')) return;
       openProfileModal(member.id);
     });
 
