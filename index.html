@@ -94,6 +94,11 @@
         <button id="navInquiryBtn" class="nav-tab-btn" title="운영진 문의 및 건의사항"><i class="fa-solid fa-envelope-open-text"></i><span class="btn-text"> 운영진 문의</span></button>
         <button id="navAdminTabBtn" class="nav-tab-btn hidden" title="운영 관리 대시보드"><i class="fa-solid fa-gear"></i><span class="btn-text"> 운영 관리</span></button>
         
+        <!-- 테마 전환 버튼 (다크모드) -->
+        <button id="themeToggleBtn" class="btn-theme-toggle" title="화면 테마 전환">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        
         <!-- 새 댓글 알림 컨테이너 -->
         <div class="notification-container hidden" id="notifContainer">
           <button id="notifBellBtn" class="btn-notif-bell" title="새 댓글 알림">
@@ -373,7 +378,7 @@
           </div>
 
           <!-- 링크 추가 폼 -->
-          <div style="background-color: #f8fafc; border: 1px solid var(--color-border); padding: 1.2rem; border-radius: var(--radius-md); margin: 0 1.5rem 1.5rem 1.5rem;">
+          <div style="background-color: var(--color-bg-input); border: 1px solid var(--color-border); padding: 1.2rem; border-radius: var(--radius-md); margin: 0 1.5rem 1.5rem 1.5rem;">
             <h4 style="margin-top: 0; margin-bottom: 0.8rem; font-size: 0.9rem; font-weight: 700; color: var(--color-text-main);">새 바로가기 링크 추가</h4>
             <form id="adminAddQuickLinkForm" style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: flex-end;">
               <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
@@ -473,14 +478,14 @@
             </div>
 
             <!-- 모달 내부: 개인 방명록 피드 (글로벌 탭에서 모달 아래로 강제 바인딩) -->
-            <div class="modal-section personal-guestbook-section" style="border-top: 1px solid #f3f2ef; padding-top: 1.5rem; margin-top: 1rem;">
+            <div class="modal-section personal-guestbook-section" style="border-top: 1px solid var(--color-border); padding-top: 1.5rem; margin-top: 1rem;">
               <h4 style="display: flex; align-items: center; justify-content: space-between;">
                 <span><i class="fa-solid fa-envelope-open-text text-gold"></i> 멤버 방명록</span>
-                <span class="comment-count" id="modalCommentCount" style="font-size: 0.72rem; font-weight: 500; background-color:#f3f2ef; padding:0.15rem 0.5rem; border-radius:10px;">로그 0개</span>
+                <span class="comment-count" id="modalCommentCount" style="font-size: 0.72rem; font-weight: 500; background-color:var(--color-bg-base); padding:0.15rem 0.5rem; border-radius:10px;">로그 0개</span>
               </h4>
               
               <!-- 방명록 등록 상자 -->
-              <div class="modal-guestbook-form-box" id="modalGuestbookFormBox" style="background-color: #f9f9f9; padding: 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin: 0.75rem 0 1rem;">
+              <div class="modal-guestbook-form-box" id="modalGuestbookFormBox" style="background-color: var(--color-bg-input); padding: 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin: 0.75rem 0 1rem;">
                 <form id="modalCommentForm" style="display: flex; flex-direction: column; gap: 0.5rem;">
                   <div class="form-row" style="display: grid; grid-template-columns: 1fr 120px; gap: 0.5rem; align-items: center;">
                     <input type="text" id="modalCommentAuthor" placeholder="작성자 이름" required maxlength="15" style="font-size: 0.78rem; padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid var(--color-border);">
@@ -511,7 +516,7 @@
           
           <form id="profileEditForm" class="edit-form">
             <!-- 관리자만 설정 가능한 기본 인적 정보 필드 -->
-            <div id="editAdminOnlyFields" class="hidden" style="background-color: #f7fafc; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 0.75rem;">
+            <div id="editAdminOnlyFields" class="hidden" style="background-color: var(--color-bg-input); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 0.75rem;">
               <h4 style="font-size: 0.8rem; color: var(--color-sogang); margin-bottom: 0.5rem; font-weight: 700;"><i class="fa-solid fa-lock"></i> 기본 학적 정보 (관리자 전용)</h4>
               <div class="form-row split">
                 <div class="form-group">
@@ -709,7 +714,7 @@
         <p class="edit-hint" style="margin-bottom: 1.2rem;">엑셀 파일(.xlsx, .xls)을 업로드하여 여러 명의 구성원을 한 번에 등록합니다.</p>
         
         <!-- 상단 가이드 및 템플릿 다운로드 -->
-        <div style="background-color: #f7fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--color-border); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="background-color: var(--color-bg-input); padding: 1rem; border-radius: 8px; border: 1px solid var(--color-border); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div style="font-size: 0.82rem; color: var(--color-text-sub); line-height: 1.45; max-width: 70%;">
             <strong style="color: var(--color-text-main);">💡 작성 팁:</strong><br>
             1. 우측 버튼을 눌러 공식 엑셀 템플릿 양식을 다운로드합니다.<br>
@@ -720,7 +725,7 @@
         </div>
 
         <!-- 엑셀 드롭존 -->
-        <div id="excelDropzone" class="excel-dropzone" style="border: 2px dashed var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: var(--transition); background-color: #faf9f6; margin-bottom: 1.5rem;">
+        <div id="excelDropzone" class="excel-dropzone" style="border: 2px dashed var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: var(--transition); background-color: var(--color-bg-input); margin-bottom: 1.5rem;">
           <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.5rem; color: var(--color-text-dim); margin-bottom: 0.8rem;"></i>
           <p style="font-size: 0.9rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 0.3rem;">여기에 엑셀 파일을 드래그하여 놓거나 클릭하여 선택하세요.</p>
           <p style="font-size: 0.75rem; color: var(--color-text-dim);">지원 파일 형식: .xlsx, .xls</p>
@@ -730,8 +735,8 @@
         <!-- 파싱 결과 미리보기 영역 -->
         <div id="excelPreviewSection" class="hidden">
           <!-- 충돌 상태 가이드 바 -->
-          <div style="background-color: #fff9e6; border: 1px solid #ffeeba; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem;">
-            <span id="excelConflictStatusText" style="font-weight: 700; color: #856404;">
+          <div class="excel-warning-banner">
+            <span id="excelConflictStatusText" style="font-weight: 700;">
               <i class="fa-solid fa-circle-exclamation"></i> 중복 데이터 진단 중...
             </span>
             <div id="excelConflictControls" class="hidden" style="display: flex; gap: 0.5rem; align-items: center;">
@@ -883,7 +888,7 @@
         </h2>
         
         <!-- 문의 정보 요약 -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; background-color: #f8fafc; border: 1px solid var(--color-border); padding: 0.8rem; border-radius: var(--radius-md); font-size: 0.85rem; margin-bottom: 1.2rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; background-color: var(--color-bg-input); border: 1px solid var(--color-border); padding: 0.8rem; border-radius: var(--radius-md); font-size: 0.85rem; margin-bottom: 1.2rem;">
           <div><strong>작성자:</strong> <span id="adminInqAuthor">홍길동</span></div>
           <div><strong>학번:</strong> <span id="adminInqStudentId" style="font-family: monospace;">v2026001</span></div>
           <div><strong>접수일시:</strong> <span id="adminInqDate">-</span></div>
@@ -893,12 +898,12 @@
         <!-- 문의 제목 및 내용 -->
         <div class="form-group" style="margin-bottom: 1.2rem;">
           <label style="font-weight: 700; display: block; margin-bottom: 0.3rem; font-size: 0.85rem;">문의 제목</label>
-          <div id="adminInqTitle" style="padding: 0.6rem; background-color: #f1f5f9; border-radius: 4px; font-size: 0.85rem; font-weight: 600; border: 1px solid var(--color-border);">문의 제목이 들어갑니다.</div>
+          <div id="adminInqTitle" style="padding: 0.6rem; background-color: var(--color-bg-input); border-radius: 4px; font-size: 0.85rem; font-weight: 600; border: 1px solid var(--color-border);">Q. 문의 제목이 들어갑니다.</div>
         </div>
 
         <div class="form-group" style="margin-bottom: 1.5rem;">
           <label style="font-weight: 700; display: block; margin-bottom: 0.3rem; font-size: 0.85rem;">문의 내용</label>
-          <div id="adminInqMessage" style="padding: 0.8rem; background-color: #f1f5f9; border-radius: 4px; font-size: 0.85rem; line-height: 1.5; min-height: 120px; white-space: pre-wrap; word-break: break-all; border: 1px solid var(--color-border);">건의 및 문의내용이 여기에 들어갑니다.</div>
+          <div id="adminInqMessage" style="padding: 0.8rem; background-color: var(--color-bg-input); border-radius: 4px; font-size: 0.85rem; line-height: 1.5; min-height: 120px; white-space: pre-wrap; word-break: break-all; border: 1px solid var(--color-border);">건의 및 문의내용이 여기에 들어갑니다.</div>
         </div>
 
         <!-- 답변 입력 폼 -->
@@ -961,7 +966,7 @@
         <!-- 1:1 대화 입력 폼 (채팅 상세 뷰에서 노출, 기본적으로 숨김) -->
         <div id="dmChatInputContainer" class="hidden" style="border-top: 1px solid var(--color-border); padding-top: 1rem; margin-top: 1rem; flex-shrink: 0; display: flex; gap: 0.4rem; flex-direction: column;">
           <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
-            <textarea id="dmChatReplyText" placeholder="답장 메시지를 입력해 주세요... (최대 500자)" rows="2" maxlength="500" style="flex: 1; font-family: var(--font-body); font-size: 0.85rem; padding: 0.5rem 0.6rem; border-radius: 6px; border: 1px solid var(--color-border); resize: none; background-color: var(--color-bg-card); color: var(--color-text);"></textarea>
+            <textarea id="dmChatReplyText" placeholder="답장 메시지를 입력해 주세요... (최대 500자)" rows="2" maxlength="500" style="flex: 1; font-family: var(--font-body); font-size: 0.85rem; padding: 0.5rem 0.6rem; border-radius: 6px; border: 1px solid var(--color-border); resize: none; background-color: var(--color-card-bg); color: var(--color-text-main);"></textarea>
             <button id="btnDmSendReply" class="btn btn-sogang" style="height: 42px; padding: 0 1rem; border-radius: 6px; font-weight: 700; display: flex; align-items: center; gap: 0.3rem; flex-shrink: 0;">
               <span class="btn-text">전송</span> <i class="fa-solid fa-paper-plane"></i>
             </button>
@@ -993,7 +998,7 @@
           <div class="form-group" style="position: relative;">
             <label for="dmReceiverSearchInput">받는 사람</label>
             <div class="searchable-select-container" style="position: relative;">
-              <input type="text" id="dmReceiverSearchInput" placeholder="이름 또는 학번 검색..." required autocomplete="off" style="width: 100%; padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--color-border); background-color: var(--color-bg-card); font-family: var(--font-body);">
+              <input type="text" id="dmReceiverSearchInput" placeholder="이름 또는 학번 검색..." required autocomplete="off" style="width: 100%; padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--color-border); background-color: var(--color-card-bg); color: var(--color-text-main); font-family: var(--font-body);">
               <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--color-text-dim); pointer-events: none;"></i>
               <input type="hidden" id="dmReceiverSelect" required>
             </div>
@@ -1058,7 +1063,7 @@
             <span>원우께서는 필수 개인정보 제공 및 이용 동의를 거부하실 권리가 있습니다. 단, 필수 정보 제공에 동의하지 않으실 경우 디렉토리 프로필 조회 및 편집 기능 이용이 제한될 수 있습니다.</span>
           </div>
 
-          <p style="background-color: var(--color-bg-light); border-left: 3px solid var(--color-sogang-gold); padding: 0.5rem 0.8rem; margin: 0; border-radius: 4px; font-weight: 500; font-size: 0.8rem;">
+          <p style="background-color: var(--color-bg-input); border-left: 3px solid var(--color-sogang-gold); padding: 0.5rem 0.8rem; margin: 0; border-radius: 4px; font-weight: 500; font-size: 0.8rem;">
             ※ 본 시스템은 RLS(행 보안) 및 관리 권한 차단 등의 보안 패치가 적용되어 있으며, 등록된 데이터는 본래의 교류 목적 외의 외부 마케팅 등으로 절대 이용되거나 제3자에게 제공되지 않습니다.
           </p>
         </div>

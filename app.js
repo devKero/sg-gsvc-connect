@@ -14,6 +14,7 @@ if (SUPABASE_URL && !SUPABASE_URL.includes("your-project-id") && typeof supabase
 
 // ==================== 상태 관리 (State) ====================
 let state = {
+  theme: 'light',          // 다크모드 테마 상태
   members: [],
   guestbook: [],
   currentUser: null,       // { id, name, classYear, isGuest, generation }
@@ -220,8 +221,47 @@ function renderSnsLinksInputArea(containerId, links) {
   }
 }
 
+// ==================== 테마 관리 (다크모드) ====================
+function initTheme() {
+  const savedTheme = localStorage.getItem('sogang_unity_theme');
+  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  if (savedTheme) {
+    state.theme = savedTheme;
+  } else {
+    state.theme = systemPrefersDark ? 'dark' : 'light';
+  }
+  
+  document.documentElement.setAttribute('data-theme', state.theme);
+  updateThemeIcon();
+}
+
+function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  localStorage.setItem('sogang_unity_theme', state.theme);
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    const icon = themeToggleBtn.querySelector('i');
+    if (icon) {
+      if (state.theme === 'dark') {
+        icon.className = 'fa-solid fa-sun';
+        themeToggleBtn.title = '라이트모드로 전환';
+      } else {
+        icon.className = 'fa-solid fa-moon';
+        themeToggleBtn.title = '다크모드로 전환';
+      }
+    }
+  }
+}
+
 // ==================== 앱 초기화 ====================
 document.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
   initLocalStorage();
   await syncWithSupabase();
   setupEventListeners();
@@ -1494,6 +1534,12 @@ function setupEventListeners() {
     btnLoadMore.addEventListener('click', loadMoreMembers);
   }
 
+  // 테마 토글 버튼 클릭
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', toggleTheme);
+  }
+
   // 무한 스크롤 설정
   setupInfiniteScroll();
 }
@@ -2376,7 +2422,7 @@ function renderMembersGrid(resetLimit = false) {
             <button class="copy-email-btn" data-email="${escapeHtml(member.email)}" title="이메일 복사"><i class="fa-regular fa-copy"></i></button>
           </div>
         ` : ''}
-        <div class="card-contacts" style="display:flex; justify-content:center; gap:0.5rem; ${member.email ? '' : 'border-top:1px solid #f3f2ef; padding-top:0.4rem;'}">
+        <div class="card-contacts" style="display:flex; justify-content:center; gap:0.5rem; ${member.email ? '' : 'border-top:1px solid var(--color-border); padding-top:0.4rem;'}">
           ${snsOnlyIconsHtml}
         </div>
         <button class="btn-view-profile" data-id="${member.id}">상세 프로필 보기</button>
