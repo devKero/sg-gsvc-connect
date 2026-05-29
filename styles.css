@@ -386,7 +386,7 @@ a {
 .navbar-right {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   flex: 1 1 0%;
   justify-content: flex-end;
 }
@@ -1707,18 +1707,8 @@ html[data-theme="dark"] .list-view .member-card:hover {
     margin-top: -24px;
     font-size: 1.2rem;
   }
-}
 
-@media (max-width: 650px) {
-  .sidebar {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-row.split,
-  .form-row.split-2 {
-    grid-template-columns: 1fr;
-  }
-
+  /* ---- 네비게이션 바 모바일 압축 모드를 900px 이하로 앞당김 ---- */
   .navbar {
     padding: 0.5rem 0.75rem;
     height: 50px;
@@ -1766,6 +1756,25 @@ html[data-theme="dark"] .list-view .member-card:hover {
   .search-box input {
     padding-left: 2rem;
   }
+
+  /* 모바일 알림 팝오버 화면 이탈 방지 */
+  .notif-popover {
+    right: -10px !important;
+    width: 290px !important;
+  }
+}
+
+@media (max-width: 650px) {
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row.split,
+  .form-row.split-2 {
+    grid-template-columns: 1fr;
+  }
+
+  /* 네비바 모바일 관련 스타일은 900px 이하 미디어 쿼리로 통합 이동됨 */
 
   /* 콘텐츠 헤더 툴바 세로 배치 */
   .content-header-toolbar {
@@ -3036,7 +3045,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
   background-color: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
-  padding: 0.45rem 0.9rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 700;
