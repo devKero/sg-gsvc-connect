@@ -4121,6 +4121,21 @@ html[data-theme="dark"] .comment-badge-tag.question { background-color: rgba(59,
 html[data-theme="dark"] .comment-badge-tag.coffee { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16, 185, 129, 0.15); color: #34d399; }
 
+/* 사이드바 소형 키워드 검색창 스타일 및 다크모드 대응 */
+#tagSearchInput {
+  background-color: var(--color-bg-input);
+  color: var(--color-text-main);
+  border: 1px solid var(--color-border);
+  transition: var(--transition);
+}
+
+#tagSearchInput:focus {
+  outline: none;
+  background-color: var(--color-card-bg);
+  border-color: var(--color-sogang);
+  box-shadow: 0 0 0 3px var(--color-sogang-glow);
+}
+
 
 
 
