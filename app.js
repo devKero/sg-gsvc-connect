@@ -3194,7 +3194,7 @@ function renderPersonalGuestbook(memberId) {
         <span class="comment-time" style="color: var(--color-text-dim); font-size:0.68rem;">${log.timestamp}</span>
       </div>
       <p class="comment-body" style="font-size:0.78rem; line-height:1.4; margin-top:0.3rem; white-space:pre-wrap;">${messageBody}</p>
-      <div class="comment-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem; padding-top:0.3rem; border-top:1px solid #f6f6f6;">
+      <div class="comment-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:0.4rem; padding-top:0.3rem; border-top:1px solid var(--color-border);">
         <button class="comment-btn like-btn" data-id="${log.id}" style="background:transparent; border:none; cursor:pointer; font-size:0.7rem; color:var(--color-text-sub); display:inline-flex; align-items:center; gap:0.2rem;">
           <i class="fa-regular fa-thumbs-up"></i> 추천 <span>(${log.likes || 0})</span>
         </button>

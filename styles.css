@@ -4136,6 +4136,23 @@ html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16,
   box-shadow: 0 0 0 3px var(--color-sogang-glow);
 }
 
+/* 개인 방명록 폼 내 입력 필드 다크모드 대응 */
+#modalCommentAuthor,
+#modalCommentMessage {
+  background-color: var(--color-bg-input);
+  color: var(--color-text-main);
+  border: 1px solid var(--color-border);
+  transition: var(--transition);
+}
+
+#modalCommentAuthor:focus,
+#modalCommentMessage:focus {
+  outline: none;
+  background-color: var(--color-card-bg);
+  border-color: var(--color-sogang);
+  box-shadow: 0 0 0 3px var(--color-sogang-glow);
+}
+
 
 
 
