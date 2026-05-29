@@ -209,15 +209,9 @@ function renderSnsLinksInputArea(containerId, links) {
   });
 
   if (addBtn) {
-    if (links.length >= 5) {
-      addBtn.disabled = true;
-      addBtn.classList.add('disabled');
-      addBtn.title = "소셜 링크는 최대 5개까지만 등록할 수 있습니다.";
-    } else {
-      addBtn.disabled = false;
-      addBtn.classList.remove('disabled');
-      addBtn.title = "";
-    }
+    addBtn.disabled = false;
+    addBtn.classList.remove('disabled');
+    addBtn.title = "";
   }
 }
 
@@ -1005,20 +999,16 @@ function setupEventListeners() {
   const btnAddEditSnsLink = document.getElementById('btnAddEditSnsLink');
   if (btnAddEditSnsLink) {
     btnAddEditSnsLink.addEventListener('click', () => {
-      if (state.editSnsLinks.length < 5) {
-        state.editSnsLinks.push({ type: 'github', value: '' });
-        renderSnsLinksInputArea('editSnsLinksContainer', state.editSnsLinks);
-      }
+      state.editSnsLinks.push({ type: 'github', value: '' });
+      renderSnsLinksInputArea('editSnsLinksContainer', state.editSnsLinks);
     });
   }
 
   const btnAddAddSnsLink = document.getElementById('btnAddAddSnsLink');
   if (btnAddAddSnsLink) {
     btnAddAddSnsLink.addEventListener('click', () => {
-      if (state.addSnsLinks.length < 5) {
-        state.addSnsLinks.push({ type: 'github', value: '' });
-        renderSnsLinksInputArea('addSnsLinksContainer', state.addSnsLinks);
-      }
+      state.addSnsLinks.push({ type: 'github', value: '' });
+      renderSnsLinksInputArea('addSnsLinksContainer', state.addSnsLinks);
     });
   }
 
