@@ -121,6 +121,11 @@ a {
   width: 100%;
 }
 
+/* 모바일 전용 토글 버튼 기본은 숨김 */
+.mobile-sidebar-toggle-btn {
+  display: none !important;
+}
+
 .btn-sm {
   padding: 0.4rem 1rem;
   font-size: 0.8rem;
@@ -4386,10 +4391,7 @@ html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16,
   transform: translateY(0);
 }
 
-/* 모바일 전용 토글 버튼 기본은 숨김 */
-.mobile-sidebar-toggle-btn {
-  display: none !important;
-}
+
 
 
 
