@@ -1642,11 +1642,49 @@ html[data-theme="dark"] .list-view .member-card:hover {
     gap: 1rem;
   }
 
-  /* 사이드바 카드가 4개이므로 2열 그리드 유지 (첫 번째 카드는 full-width) */
+  /* 모바일 필터 및 설정 토글 버튼 노출 */
+  .mobile-sidebar-toggle-btn {
+    display: inline-flex !important;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    color: var(--color-sogang);
+    border: 1px solid var(--color-sogang);
+    background-color: var(--color-card-bg);
+    box-shadow: 0 2px 8px rgba(182, 0, 5, 0.05);
+    padding: 0.65rem 1rem;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    transition: var(--transition);
+    cursor: pointer;
+  }
+
+  .mobile-sidebar-toggle-btn:hover {
+    background-color: var(--color-sogang-glow);
+  }
+
+  /* 모바일에서 사이드바 내부 4개 카드 아코디언 토글 대응 */
   .sidebar {
-    display: grid;
+    display: grid !important;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
+    max-height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin-bottom 0.3s !important;
+  }
+
+  .sidebar.active-mobile {
+    max-height: 1500px !important; /* 넉넉한 스케일 부여 */
+    opacity: 1 !important;
+    margin-bottom: 1.5rem !important;
+    overflow: visible !important; /* 드롭다운 잘림 방지 */
   }
 
   /* 미니프로필 카드는 항상 전체 너비 */
@@ -4346,6 +4384,11 @@ html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16,
 
 .dm-write-btn:active {
   transform: translateY(0);
+}
+
+/* 모바일 전용 토글 버튼 기본은 숨김 */
+.mobile-sidebar-toggle-btn {
+  display: none !important;
 }
 
 

@@ -816,6 +816,21 @@ function checkSession() {
 
 // ==================== 이벤트 리스너 바인딩 ====================
 function setupEventListeners() {
+  // 모바일 사이드바 토글 버튼 이벤트
+  const btnMobileSidebarToggle = document.getElementById('btnMobileSidebarToggle');
+  const sidebar = document.querySelector('.sidebar');
+  if (btnMobileSidebarToggle && sidebar) {
+    btnMobileSidebarToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('active-mobile');
+      btnMobileSidebarToggle.classList.toggle('active');
+      
+      const isActive = sidebar.classList.contains('active-mobile');
+      btnMobileSidebarToggle.innerHTML = isActive 
+        ? `<i class="fa-solid fa-sliders"></i> 필터 및 설정 닫기 <i class="fa-solid fa-chevron-up toggle-icon" style="transition: transform 0.3s;"></i>`
+        : `<i class="fa-solid fa-sliders"></i> 상세 필터 및 설정 보기 <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s;"></i>`;
+    });
+  }
+
   // 로그인 서브밋
   document.getElementById('loginForm').addEventListener('submit', handleLogin);
   
