@@ -3240,7 +3240,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #fafbfc;
+  background-color: var(--color-bg-input);
 }
 
 .btn-mark-all-read {
@@ -3266,7 +3266,7 @@ a {
 
 .notif-item {
   padding: 0.8rem 1rem;
-  border-bottom: 1px solid #f1f3f7;
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -3279,7 +3279,7 @@ a {
 }
 
 .notif-item:hover {
-  background-color: #f7fafc;
+  background-color: var(--color-bg-input);
 }
 
 /* 읽지 않은 최신 알림은 옅은 붉은기 도는 실버 백그라운드로 포인트 */
