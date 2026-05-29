@@ -304,6 +304,8 @@ a {
   align-items: center;
   gap: 0.5rem;
   color: #ffffff;
+  cursor: pointer;
+  user-select: none;
 }
 
 .nav-logo {

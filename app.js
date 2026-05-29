@@ -1482,6 +1482,12 @@ function setupEventListeners() {
     });
   }
 
+  // 브랜드 로고 클릭 이벤트 바인딩
+  const brandLogo = document.getElementById('navBrandLogo');
+  if (brandLogo) {
+    brandLogo.addEventListener('click', resetFiltersAndShowDirectory);
+  }
+
   // 더 보기 버튼 클릭 이벤트 바인딩
   const btnLoadMore = document.getElementById('btnLoadMoreMembers');
   if (btnLoadMore) {
@@ -1533,6 +1539,40 @@ function setupInfiniteScroll() {
       }
     }
   });
+}
+
+// 필터를 초기화하고 메인 디렉토리 뷰로 이동
+function resetFiltersAndShowDirectory() {
+  state.selectedTag = '';
+  state.tagSearchTerm = '';
+  state.selectedGeneration = '';
+  state.selectedMajor = '';
+  state.selectedDegree = '';
+  state.searchTerm = '';
+
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) searchInput.value = '';
+
+  const tagSearchInput = document.getElementById('tagSearchInput');
+  if (tagSearchInput) tagSearchInput.value = '';
+
+  const genSelect = document.getElementById('generationFilter');
+  if (genSelect) genSelect.value = '';
+
+  const majorSelect = document.getElementById('majorFilter');
+  if (majorSelect) majorSelect.value = '';
+
+  const degreeSelect = document.getElementById('degreeFilter');
+  if (degreeSelect) degreeSelect.value = '';
+
+  const clearBtn = document.getElementById('clearFilterBtn');
+  if (clearBtn) clearBtn.classList.add('hidden');
+
+  document.querySelectorAll('.btn-tag').forEach(b => b.classList.remove('active'));
+
+  switchToDirectory();
+  renderFilterTags();
+  renderMembersGrid(true);
 }
 
 // 개인정보 처리방침 모달 제어 함수
