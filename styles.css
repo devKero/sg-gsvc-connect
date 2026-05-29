@@ -1949,6 +1949,19 @@ html[data-theme="dark"] .list-view .member-card:hover {
     gap: 0.5rem;
   }
 
+  .admin-table-actions > * {
+    width: 100% !important;
+  }
+
+  .admin-filter-select {
+    width: 100% !important;
+  }
+
+  .admin-table-actions .btn {
+    width: 100% !important;
+    justify-content: center;
+  }
+
   .admin-search-box input {
     width: 100%;
   }
@@ -2002,6 +2015,42 @@ html[data-theme="dark"] .list-view .member-card:hover {
   .notif-popover {
     width: min(320px, calc(100vw - 1.5rem));
     right: -10px;
+  }
+
+  /* ---- 관리자 대시보드 모바일 탭 메뉴 스크롤 최적화 ---- */
+  .admin-tab-menu, .admin-sub-tab-menu {
+    overflow-x: auto !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem !important;
+  }
+  
+  .admin-tab-menu button, .admin-sub-tab-menu button {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* ---- 모바일 대시보드 테이블 불필요한 정보 숨김 (가로 폭 최적화) ---- */
+  /* 1) 회원 관리 테이블: 전공(4번째), 학위(5번째) 열 숨김 */
+  .admin-member-table th:nth-child(4),
+  .admin-member-table td:nth-child(4),
+  .admin-member-table th:nth-child(5),
+  .admin-member-table td:nth-child(5) {
+    display: none !important;
+  }
+
+  /* 2) 건의 및 문의사항 테이블: 학번(2번째), 작성일(5번째) 열 숨김 */
+  #adminInquirySection table th:nth-child(2),
+  #adminInquirySection table td:nth-child(2),
+  #adminInquirySection table th:nth-child(5),
+  #adminInquirySection table td:nth-child(5) {
+    display: none !important;
+  }
+  
+  /* 건의 및 문의사항 테이블 가로 폭 강제 릴리즈 (고정 너비 800px 돌파 방지) */
+  #adminInquirySection table {
+    table-layout: auto !important;
   }
 }
 
@@ -2380,7 +2429,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
   }
 
   .admin-stats-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr !important;
     gap: 0.5rem;
     margin-bottom: 1rem;
   }
