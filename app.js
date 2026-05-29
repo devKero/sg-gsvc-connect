@@ -2408,10 +2408,16 @@ function renderMembersGrid(resetLimit = false) {
     if (item.isAd) {
       const card = document.createElement('article');
       card.className = 'member-card ad-card';
+      
+      const cols = getGridCols();
+      const isMobile = cols <= 2;
+      const minHeight = isMobile ? '160px' : '270px';
+      const adScale = isMobile ? '0.5' : '0.8';
+
       card.innerHTML = `
-        <div style="width: 100%; height: 100%; min-height: 270px; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--color-card-bg); padding: 10px; box-sizing: border-box; position: relative; overflow: hidden;">
+        <div style="width: 100%; height: 100%; min-height: ${minHeight}; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--color-card-bg); padding: 10px; box-sizing: border-box; position: relative; overflow: hidden;">
           <span style="position: absolute; top: 8px; right: 10px; font-size: 0.65rem; color: var(--color-text-dim); background-color: var(--color-bg-input); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border); font-weight: 600; z-index: 10;">AD</span>
-          <div id="coupang-ad-wrapper" style="width: 300px; height: 280px; display: flex; align-items: center; justify-content: center; overflow: hidden; transform: scale(0.8); transform-origin: center;">
+          <div id="coupang-ad-wrapper" style="width: 300px; height: 280px; display: flex; align-items: center; justify-content: center; overflow: hidden; transform: scale(${adScale}); transform-origin: center;">
             <iframe src="https://ads-partners.coupang.com/widgets.html?id=992906&template=carousel&trackingCode=AF8115760&subId=membercard&width=300&height=280&tsource=" width="300" height="280" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics style="border: none; background: transparent;"></iframe>
           </div>
         </div>
