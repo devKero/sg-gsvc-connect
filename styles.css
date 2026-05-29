@@ -2105,7 +2105,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
 
   /* ---- 검색바 ---- */
   .search-bar-row {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
   }
 
   .search-bar-row .search-box input {
@@ -3592,7 +3592,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
 
 /* ==================== 메인 영역 검색 바 스타일 ==================== */
 .search-bar-row {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
   width: 100%;
 }
 
