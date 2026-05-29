@@ -568,7 +568,7 @@ a {
 }
 
 .btn-tag {
-  background-color: #f3f2ef;
+  background-color: var(--color-bg-input);
   color: var(--color-text-sub);
   border: none;
   font-family: var(--font-body);
@@ -580,7 +580,7 @@ a {
 }
 
 .btn-tag:hover {
-  background-color: #e4e2de;
+  background-color: var(--color-border);
   color: var(--color-text-main);
 }
 
@@ -679,7 +679,7 @@ a {
 /* 뷰 모드 스위치 컨테이너 */
 .view-toggle-container {
   display: flex;
-  background-color: #eef3f8;
+  background-color: var(--color-bg-input);
   border-radius: var(--radius-md);
   padding: 2px;
   border: 1px solid var(--color-border);
