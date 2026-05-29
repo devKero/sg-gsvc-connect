@@ -13,7 +13,7 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- CSS Style -->
-  <link rel="stylesheet" href="styles.css?v=20260529_v6">
+  <link rel="stylesheet" href="styles.css?v=20260529_v7">
   <!-- SheetJS Excel Library -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Cropper.js Library for image cropping -->
@@ -961,11 +961,13 @@
         </h2>
         
         <!-- 쪽지함 서브 탭 (목록 뷰에서 노출) -->
-        <div id="dmSubTabMenu" class="admin-sub-tab-menu" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--color-border); margin-bottom: 1rem; flex-shrink: 0; padding: 0 0 0.5rem 0; align-items: center;">
-          <span style="font-size: 0.85rem; font-weight: 700; color: var(--color-text-sub); display: flex; align-items: center; gap: 0.3rem;">
-            <i class="fa-solid fa-comments" style="color: var(--color-sogang);"></i> 최근 대화 목록
+        <div id="dmSubTabMenu" class="dm-sub-tab-menu">
+          <span class="dm-sub-tab-title">
+            <i class="fa-solid fa-comments"></i> 최근 대화 목록
           </span>
-          <button id="btnOpenSendDmFromInbox" class="btn btn-sogang btn-sm" style="margin-left: auto; border-radius: 4px; font-weight: 700;"><i class="fa-solid fa-pen-to-square"></i> 새 쪽지 작성</button>
+          <button id="btnOpenSendDmFromInbox" class="btn btn-sogang btn-sm dm-write-btn">
+            <i class="fa-solid fa-pen-to-square"></i> 새 쪽지 작성
+          </button>
         </div>
 
         <!-- 쪽지 리스트 컨테이너 (스레드 목록 / 대화 말풍선 기록) -->
@@ -1086,6 +1088,6 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="app.js?v=20260529_v6"></script>
+  <script type="module" src="app.js?v=20260529_v7"></script>
 </body>
 </html>

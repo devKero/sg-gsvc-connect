@@ -2361,14 +2361,17 @@ a {
   }
 
   /* 최근 대화 목록 및 새 쪽지 작성 탭 wrap 처리 */
-  #dmSubTabMenu {
+  .dm-sub-tab-menu {
     flex-wrap: wrap !important;
-    gap: 0.4rem !important;
+    row-gap: 0.6rem !important;
+    column-gap: 0.4rem !important;
+    padding-bottom: 0.8rem !important;
   }
 
-  #dmSubTabMenu button {
-    padding: 0.3rem 0.55rem !important;
-    font-size: 0.72rem !important;
+  .dm-sub-tab-menu .dm-write-btn {
+    padding: 0.4rem 0.7rem !important;
+    font-size: 0.75rem !important;
+    margin-left: auto;
   }
 
   /* 리스트 컨테이너 키보드 팝업 시 화면 밖 이탈 방지 */
@@ -4151,6 +4154,54 @@ html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16,
   background-color: var(--color-card-bg);
   border-color: var(--color-sogang);
   box-shadow: 0 0 0 3px var(--color-sogang-glow);
+}
+
+/* 쪽지함 서브 탭 메뉴 및 새 쪽지 작성 버튼 스타일 */
+.dm-sub-tab-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 1rem;
+  padding: 0.2rem 0 0.8rem 0; /* 상단 0.2rem, 하단 0.8rem으로 수직 균형 및 아래 보더와의 거리를 확보 */
+  flex-shrink: 0;
+}
+
+.dm-sub-tab-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dm-sub-tab-title i {
+  color: var(--color-sogang);
+}
+
+.dm-write-btn {
+  border-radius: 6px;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  line-height: 1;
+  transition: var(--transition);
+}
+
+.dm-write-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(182, 0, 5, 0.2);
+}
+
+.dm-write-btn:active {
+  transform: translateY(0);
 }
 
 
