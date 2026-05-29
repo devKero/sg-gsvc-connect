@@ -4032,6 +4032,90 @@ html[data-theme="dark"] .conflict-row:hover {
   background-color: rgba(224, 44, 50, 0.12) !important;
 }
 
+/* 프리미엄 테마 토글 스위치 스타일 */
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 54px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-bg-input);
+  transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+}
+
+.theme-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+}
+
+.theme-slider i {
+  font-size: 0.72rem;
+  z-index: 1;
+  transition: 0.4s;
+}
+
+.theme-slider .icon-sun {
+  color: #f59e0b;
+  opacity: 1;
+}
+
+.theme-slider .icon-moon {
+  color: #a1a1aa;
+  opacity: 0.5;
+}
+
+/* 다크모드일 때 스위치 상태 변경 */
+.theme-switch input:checked + .theme-slider {
+  background-color: #202024;
+  border-color: #2d2d34;
+}
+
+.theme-switch input:checked + .theme-slider:before {
+  transform: translateX(26px);
+  background-color: #18181c;
+  box-shadow: inset -3px -2px 0px 0px #e2be7a; /* 골드 크레센트 달 효과 */
+}
+
+.theme-switch input:checked + .theme-slider .icon-sun {
+  opacity: 0.3;
+  color: #71717a;
+}
+
+.theme-switch input:checked + .theme-slider .icon-moon {
+  opacity: 1;
+  color: #e2be7a;
+}
+
+
 
 
 

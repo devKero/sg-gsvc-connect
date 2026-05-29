@@ -190,14 +190,18 @@
             </div>
           </div>
 
-          <!-- 테마 설정 패널 (다크모드) -->
+          <!-- 테마 설정 패널 (다크모드 토글 스위치) -->
           <div class="sidebar-card theme-switch-panel" style="padding: 0.8rem 1.2rem; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--color-border); margin-top: 0.5rem;">
             <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-main); display: flex; align-items: center; gap: 0.4rem;">
               <i class="fa-solid fa-circle-half-stroke" style="color: var(--color-sogang-gold);"></i> 화면 테마 설정
             </span>
-            <button id="themeToggleBtn" class="btn-theme-toggle" title="화면 테마 전환">
-              <i class="fa-solid fa-moon"></i>
-            </button>
+            <label class="theme-switch" for="themeToggleCheckbox" title="화면 테마 전환">
+              <input type="checkbox" id="themeToggleCheckbox">
+              <span class="theme-slider">
+                <i class="fa-solid fa-sun icon-sun"></i>
+                <i class="fa-solid fa-moon icon-moon"></i>
+              </span>
+            </label>
           </div>
           
           <!-- 사이드바 하단 정보 및 개인정보 처리방침 -->

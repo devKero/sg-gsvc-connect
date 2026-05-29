@@ -223,7 +223,13 @@ function renderSnsLinksInputArea(containerId, links) {
 
 // ==================== 테마 관리 (다크모드) ====================
 function initTheme() {
-  const savedTheme = localStorage.getItem('sogang_unity_theme');
+  let savedTheme = null;
+  try {
+    savedTheme = localStorage.getItem('sogang_unity_theme');
+  } catch (e) {
+    console.warn("localStorage 읽기 실패:", e);
+  }
+  
   const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   
   if (savedTheme) {
@@ -233,29 +239,24 @@ function initTheme() {
   }
   
   document.documentElement.setAttribute('data-theme', state.theme);
-  updateThemeIcon();
+  updateThemeSwitchUI();
 }
 
 function toggleTheme() {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', state.theme);
-  localStorage.setItem('sogang_unity_theme', state.theme);
-  updateThemeIcon();
+  try {
+    localStorage.setItem('sogang_unity_theme', state.theme);
+  } catch (e) {
+    console.warn("localStorage 저장 실패:", e);
+  }
+  updateThemeSwitchUI();
 }
 
-function updateThemeIcon() {
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  if (themeToggleBtn) {
-    const icon = themeToggleBtn.querySelector('i');
-    if (icon) {
-      if (state.theme === 'dark') {
-        icon.className = 'fa-solid fa-sun';
-        themeToggleBtn.title = '라이트모드로 전환';
-      } else {
-        icon.className = 'fa-solid fa-moon';
-        themeToggleBtn.title = '다크모드로 전환';
-      }
-    }
+function updateThemeSwitchUI() {
+  const checkbox = document.getElementById('themeToggleCheckbox');
+  if (checkbox) {
+    checkbox.checked = (state.theme === 'dark');
   }
 }
 
@@ -1534,10 +1535,11 @@ function setupEventListeners() {
     btnLoadMore.addEventListener('click', loadMoreMembers);
   }
 
-  // 테마 토글 버튼 클릭
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', toggleTheme);
+  // 테마 토글 스위치 변경 이벤트
+  const themeToggleCheckbox = document.getElementById('themeToggleCheckbox');
+  if (themeToggleCheckbox) {
+    themeToggleCheckbox.checked = (state.theme === 'dark');
+    themeToggleCheckbox.addEventListener('change', toggleTheme);
   }
 
   // 무한 스크롤 설정
