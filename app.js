@@ -2411,44 +2411,12 @@ function renderMembersGrid(resetLimit = false) {
       card.innerHTML = `
         <div style="width: 100%; height: 100%; min-height: 270px; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--color-card-bg); padding: 10px; box-sizing: border-box; position: relative; overflow: hidden;">
           <span style="position: absolute; top: 8px; right: 10px; font-size: 0.65rem; color: var(--color-text-dim); background-color: var(--color-bg-input); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border); font-weight: 600; z-index: 10;">AD</span>
-          <div id="coupang-ad-wrapper" style="width: 300px; height: 280px; display: flex; align-items: center; justify-content: center; overflow: hidden; transform: scale(0.8); transform-origin: center;"></div>
+          <div id="coupang-ad-wrapper" style="width: 300px; height: 280px; display: flex; align-items: center; justify-content: center; overflow: hidden; transform: scale(0.8); transform-origin: center;">
+            <iframe src="https://ads-partners.coupang.com/widgets.html?id=992906&template=carousel&trackingCode=AF8115760&subId=membercard&width=300&height=280&tsource=" width="300" height="280" frameborder="0" scrolling="no" referrerpolicy="unsafe-url" browsingtopics style="border: none; background: transparent;"></iframe>
+          </div>
         </div>
       `;
       gridContainer.appendChild(card);
-
-      // 격리된 iframe을 활용하여 document.currentScript 유실 및 동적 렌더링 라이프사이클 이슈 완벽 해결
-      const wrapper = card.querySelector('#coupang-ad-wrapper');
-      const iframe = document.createElement('iframe');
-      iframe.style.width = "300px";
-      iframe.style.height = "280px";
-      iframe.style.border = "none";
-      iframe.style.background = "transparent";
-      iframe.srcdoc = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { margin: 0; padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: transparent; }
-          </style>
-        </head>
-        <body>
-          <script src="https://ads-partners.coupang.com/g.js"></script>
-          <script>
-            new PartnersCoupang.G({
-              "id": 992906,
-              "template": "carousel",
-              "trackingCode": "AF8115760",
-              "subId": "membercard",
-              "width": "300",
-              "height": "280",
-              "tsource": ""
-            });
-          </script>
-        </body>
-        </html>
-      `;
-      wrapper.appendChild(iframe);
       return;
     }
 
