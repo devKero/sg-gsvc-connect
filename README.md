@@ -52,7 +52,107 @@
 ### 2단계: 데이터베이스 테이블 생성
 1. 생성된 Supabase 대시보드 좌측 메뉴에서 **[SQL Editor]**를 클릭합니다.
 2. **[Create a new query]**를 클릭하여 빈 쿼리창을 엽니다.
-3. 본 프로젝트 루트에 포함된 [schema.sql](file:///e:/Works/_Dev/MemberCard/schema.sql) 파일의 전체 SQL 스크립트 내용을 복사하여 붙여넣은 뒤, 우측 하단의 **[Run]** 버튼을 실행합니다.
+3. 아래의 **[Supabase 테이블 및 스토리지 생성 SQL 스크립트]**를 펼쳐서 전체 복사한 뒤 쿼리창에 붙여넣고, 우측 하단의 **[Run]** 버튼을 클릭하여 실행합니다.
+
+   <details>
+   <summary><b>🔥 Supabase 테이블 및 스토리지 생성 SQL 스크립트 (클릭하여 펼치기)</b></summary>
+
+   ```sql
+   -- 1. members 테이블 생성
+   CREATE TABLE IF NOT EXISTS public.members (
+       id text PRIMARY KEY,
+       student_id text UNIQUE NOT NULL,
+       phone_last4 text NOT NULL,
+       name text NOT NULL,
+       class_year text NOT NULL,
+       generation integer,
+       headline text NOT NULL,
+       avatar_color text DEFAULT '#B30838',
+       email text,
+       sns_links jsonb DEFAULT '[]'::jsonb,
+       tags text[],
+       bio text,
+       projects text,
+       custom_content text,
+       avatar_image text,
+       degree_process text DEFAULT '석사',
+       academic_status text DEFAULT '재학',
+       education text DEFAULT '',
+       experience text DEFAULT '',
+       role text DEFAULT 'member',
+       created_at timestamp with time zone DEFAULT now()
+   );
+
+   -- 2. guestbook 테이블 생성
+   CREATE TABLE IF NOT EXISTS public.guestbook (
+       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+       target_member_id text NOT NULL,
+       author text NOT NULL,
+       message text NOT NULL,
+       tag text NOT NULL,
+       is_private boolean DEFAULT false,
+       timestamp text NOT NULL,
+       likes integer DEFAULT 0,
+       created_at timestamp with time zone DEFAULT now()
+   );
+
+   -- 인수인계와 간편한 데모 작동을 위해 테이블 보안(RLS)을 임시 해제합니다.
+   ALTER TABLE public.members DISABLE ROW LEVEL SECURITY;
+   ALTER TABLE public.guestbook DISABLE ROW LEVEL SECURITY;
+
+   -- 4. majors 테이블 생성 및 기본 데이터 추가
+   CREATE TABLE IF NOT EXISTS public.majors (
+       id serial PRIMARY KEY,
+       name text UNIQUE NOT NULL
+   );
+   ALTER TABLE public.majors DISABLE ROW LEVEL SECURITY;
+
+   INSERT INTO public.majors (name) VALUES 
+   ('메타버스 전공'), 
+   ('컴퓨터공학 전공'), 
+   ('미디어 테크놀로지'), 
+   ('아트&테크놀로지'), 
+   ('가상융합 시스템'), 
+   ('인공지능 전공')
+   ON CONFLICT (name) DO NOTHING;
+
+   -- 3. Storage 버킷 설정
+   INSERT INTO storage.buckets (id, name, public) 
+   VALUES ('avatars', 'avatars', true)
+   ON CONFLICT (id) DO NOTHING;
+
+   -- 누구나 프로필 이미지를 다운로드받아 읽을 수 있는 권한 정책 부여
+   CREATE POLICY "Public Read Access" ON storage.objects 
+       FOR SELECT USING (bucket_id = 'avatars');
+
+   -- 누구나 프로필 이미지를 업로드할 수 있는 권한 정책 부여
+   CREATE POLICY "Anyone can Upload" ON storage.objects 
+       FOR INSERT WITH CHECK (bucket_id = 'avatars');
+
+   -- 누구나 자신의 프로필 이미지를 수정할 수 있는 권한 정책 부여
+   CREATE POLICY "Anyone can Update" ON storage.objects 
+       FOR UPDATE USING (bucket_id = 'avatars');
+
+   -- 누구나 자신의 프로필 이미지를 삭제할 수 있는 권한 정책 부여
+   CREATE POLICY "Anyone can Delete" ON storage.objects 
+       FOR DELETE USING (bucket_id = 'avatars');
+
+   -- 5. inquiries 테이블 생성 (운영진 문의 및 건의 소통)
+   CREATE TABLE IF NOT EXISTS public.inquiries (
+       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+       student_id text NOT NULL,
+       author text NOT NULL,
+       title text,
+       message text NOT NULL,
+       reply text,
+       replied_by text,
+       status text DEFAULT 'pending',
+       created_at timestamp with time zone DEFAULT now()
+   );
+   ALTER TABLE public.inquiries DISABLE ROW LEVEL SECURITY;
+   ```
+   </details>
+   
    * *결과창에 `Success. No rows returned`가 나타나면 멤버 테이블, 방명록 테이블 및 스토리지 접근 정책 생성이 완료된 것입니다.*
 
 ### 3단계: 프로필 사진용 스토리지 버킷 생성
@@ -72,5 +172,5 @@
    const SUPABASE_URL = "복사한_Project_URL_붙여넣기";
    const SUPABASE_KEY = "복사한_anon_public_Key_붙여넣기";
    ```
-5. 이제 사이트를 새로고침하면 자동으로 Supabase 데이터베이스와 연동이 시작되며, 클라우드에 정보가 없을 경우 최초 12인의 샘플 시드 데이터가 자동으로 Supabase DB에 주입됩니다.
+5. 이제 사이트를 새로고침하면 자동으로 Supabase 데이터베이스와 연동이 완료됩니다.
    * *이후부터는 사진 등록, 프로필 변경, 방명록 추가가 전 세계 모든 접속자 브라우저에 실시간 동기화되어 즉각 공유됩니다.*
