@@ -2409,10 +2409,12 @@ function renderMembersGrid(resetLimit = false) {
       const card = document.createElement('article');
       card.className = 'member-card ad-card';
       
-      const cols = getGridCols();
-      const isMobile = cols <= 2;
+      const isMobile = window.innerWidth <= 480;
       const minHeight = isMobile ? '160px' : '270px';
       const adScale = isMobile ? '0.5' : '0.8';
+
+      // 카드 상자 자체(article)의 최소 높이도 덮어써서 칸 크기를 확실히 줄임
+      card.style.minHeight = minHeight;
 
       card.innerHTML = `
         <div style="width: 100%; height: 100%; min-height: ${minHeight}; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--color-card-bg); padding: 10px; box-sizing: border-box; position: relative; overflow: hidden;">
@@ -5840,12 +5842,15 @@ function getGridCols() {
   }
 }
 
-// 창 크기가 변경되어 열(Column) 개수가 바뀌었을 때만 리렌더링 실행 (성능 최적화)
+// 창 크기가 변경되어 열(Column) 개수나 모바일 경계(480px)가 바뀌었을 때만 리렌더링 실행 (성능 최적화)
 let lastGridCols = getGridCols();
+let lastIsMobile = window.innerWidth <= 480;
 window.addEventListener('resize', () => {
   const currentCols = getGridCols();
-  if (currentCols !== lastGridCols) {
+  const currentIsMobile = window.innerWidth <= 480;
+  if (currentCols !== lastGridCols || currentIsMobile !== lastIsMobile) {
     lastGridCols = currentCols;
+    lastIsMobile = currentIsMobile;
     // 디렉토리 탭이 활성화되어 있을 때만 갱신
     const activeTab = state.activeTab || 'directory'; // 혹은 현재 탭 상태 변수 확인
     if (activeTab === 'directory') {
