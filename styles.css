@@ -373,7 +373,7 @@ a {
 
 .search-box input:focus {
   outline: none;
-  background-color: #ffffff;
+  background-color: var(--color-card-bg);
   border-color: var(--color-sogang-gold);
   color: var(--color-text-main);
 }
@@ -473,7 +473,7 @@ a {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  border: 3px solid #ffffff;
+  border: 3px solid var(--color-card-bg);
   margin: -30px auto 0.5rem;
   font-size: 1.5rem;
   font-weight: bold;
@@ -706,7 +706,7 @@ a {
 }
 
 .btn-view-toggle.active {
-  background-color: #ffffff;
+  background-color: var(--color-card-bg);
   color: var(--color-sogang);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -748,7 +748,7 @@ a {
   width: 56px; /* 아바타 크기 축소 */
   height: 56px;
   border-radius: 50%;
-  border: 3px solid #ffffff;
+  border: 3px solid var(--color-card-bg);
   margin: 1.5rem auto 0.5rem;
   font-size: 1.45rem;
   font-weight: 700;
@@ -2528,7 +2528,7 @@ a {
 #adminMajorList {
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
+  background-color: var(--color-card-bg);
 }
 
 #adminMajorList li {
@@ -2947,7 +2947,7 @@ a {
   border-radius: 6px;
   font-size: 0.85rem;
   border: 1px solid var(--color-border);
-  background-color: #ffffff;
+  background-color: var(--color-card-bg);
   cursor: pointer;
   transition: var(--transition);
 }
@@ -3220,7 +3220,7 @@ a {
   top: 45px;
   right: -50px;
   width: min(320px, calc(100vw - 1rem)); /* 뷰포트 너비를 초과하지 않도록 제한 */
-  background-color: #ffffff;
+  background-color: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -3415,7 +3415,7 @@ a {
 .search-bar-row .search-box input {
   font-family: var(--font-body);
   font-size: 0.9rem;
-  background-color: #ffffff;
+  background-color: var(--color-bg-input);
   border: 1px solid var(--color-border);
   padding: 0.65rem 1rem 0.65rem 2.4rem;
   border-radius: var(--radius-md);
@@ -3528,7 +3528,7 @@ a {
 
 /* ==================== 쪽지함 (DM) 스타일 ==================== */
 .dm-card {
-  background-color: #ffffff;
+  background-color: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0.8rem;
@@ -4114,6 +4114,13 @@ html[data-theme="dark"] .conflict-row:hover {
   opacity: 1;
   color: #e2be7a;
 }
+
+/* 방명록 코멘트 배지 태그 다크모드 대응 */
+html[data-theme="dark"] .comment-badge-tag.cheer { background-color: rgba(239, 68, 68, 0.15); color: #f87171; }
+html[data-theme="dark"] .comment-badge-tag.question { background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+html[data-theme="dark"] .comment-badge-tag.coffee { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16, 185, 129, 0.15); color: #34d399; }
+
 
 
 
