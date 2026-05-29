@@ -1783,40 +1783,84 @@ html[data-theme="dark"] .list-view .member-card:hover {
     width: 100%;
   }
 
-  /* 모바일 가로 리스트뷰 보정 */
-  .list-view .card-body {
-    grid-template-columns: 1fr;
-    gap: 0.2rem;
-  }
-  
+  /* 모바일 가로 리스트뷰 보정 (초슬림 콤팩트 한 줄 목록화) */
   .list-view .member-card {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 1rem;
+    flex-direction: row !important; /* 모바일에서도 세로로 꺾이지 않고 가로 한 줄 유지 */
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0.45rem 0.75rem !important; /* 높이 극소화 */
+    gap: 0.6rem !important;
+    border-left-width: 3px !important;
   }
-  
+
   .list-view .card-avatar {
-    margin-bottom: 0.5rem;
+    width: 32px !important; /* 아바타 소형화 */
+    height: 32px !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 0 !important; /* 마진 제거 */
+    box-shadow: none !important;
+  }
+
+  .list-view .card-body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.15rem !important;
+    flex: 1 !important;
+    min-width: 0 !important; /* flex 축소 지원 */
+  }
+
+  .list-view .card-name-group {
+    flex-direction: row !important; /* 이름과 기수를 가로로 정렬 */
+    align-items: center !important;
+    gap: 0.3rem !important;
+    width: 100% !important;
+  }
+
+  .list-view .card-name {
+    font-size: 0.82rem !important;
+    white-space: nowrap !important;
+  }
+
+  .list-view .card-class {
+    display: none !important; /* 모바일 초슬림 목록 탐색을 위해 학과/학번 뱃지 생략 */
+  }
+
+  .list-view .card-headline {
+    font-size: 0.72rem !important;
+    color: var(--color-text-sub) !important;
+    white-space: nowrap !important; /* 모바일 목록에서는 한 줄 강제 절단 */
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    max-width: 100% !important;
+  }
+
+  .list-view .card-tags {
+    display: none !important; /* 모바일 초슬림 목록 탐색을 위해 태그 생략 */
   }
 
   .list-view .card-footer {
-    flex-direction: column !important; /* 모바일에서는 다시 세로로 안전하게 적층 */
-    align-items: stretch !important;
-    width: 100%;
-    justify-content: space-between;
-    margin-top: 0.5rem;
-    border-top: 1px solid var(--color-border);
-    padding-top: 0.5rem;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: none !important; /* 상단 경계선 제거 */
   }
 
-  .list-view .card-email-row {
-    display: flex !important; /* 모바일 세로 배치에서는 이메일 주소 뱃지 다시 노출 */
-    max-width: 100% !important; /* 가로폭 제한 복구 */
-    margin: 0.2rem auto 0 !important; /* 중앙 정렬 복구 */
+  /* 모바일 리스트뷰에서는 이메일 및 소셜 링크들을 전부 숨겨 가로폭/세로폭 낭비 원천 차단 */
+  .list-view .card-email-row,
+  .list-view .card-contacts {
+    display: none !important;
   }
 
-  .list-view .card-email-row .email-text {
-    max-width: 100% !important; /* 텍스트 생략 폭 최대화 */
+  .list-view .btn-view-profile {
+    padding: 0.18rem 0.45rem !important; /* 버튼 초소형화 */
+    font-size: 0.65rem !important;
+    border-radius: 4px !important;
   }
 
   /* 관리자 대시보드 태블릿/소형 */
@@ -2013,8 +2057,8 @@ html[data-theme="dark"] .list-view .member-card:hover {
 
   /* ---- 멤버 카드 그리드 (1열 + 컴팩트 세로 카드) ---- */
   .members-grid.grid-view {
-    grid-template-columns: 1fr;
-    gap: 0.6rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
 
   .grid-view .member-card {
