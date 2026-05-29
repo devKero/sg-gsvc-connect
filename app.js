@@ -2391,7 +2391,56 @@ function renderMembersGrid(resetLimit = false) {
 
   // 카드 그리기
   const visibleMembers = filtered.slice(0, state.membersLimit);
-  visibleMembers.forEach(member => {
+
+  // 쿠팡 광고 카드를 동적 인덱스(첫 줄 마지막 칸)에 삽입
+  const itemsToRender = [...visibleMembers];
+  if (itemsToRender.length > 0) {
+    const cols = getGridCols();
+    let adIndex = cols - 1; // 첫 번째 줄 마지막 칸 (0-indexed)
+    if (cols === 1) {
+      adIndex = 1; // 모바일 1열일 때는 2번째 자리에 노출
+    }
+    const insertPos = Math.min(adIndex, itemsToRender.length);
+    itemsToRender.splice(insertPos, 0, { isAd: true });
+  }
+
+  itemsToRender.forEach(item => {
+    if (item.isAd) {
+      const card = document.createElement('article');
+      card.className = 'member-card ad-card';
+      card.innerHTML = `
+        <div style="width: 100%; height: 100%; min-height: 270px; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--color-card-bg); padding: 10px; box-sizing: border-box; position: relative;">
+          <span style="position: absolute; top: 8px; right: 10px; font-size: 0.65rem; color: var(--color-text-dim); background-color: var(--color-bg-input); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border); font-weight: 600; z-index: 10;">AD</span>
+          <div id="coupang-ad-wrapper" style="width: 300px; height: 280px; display: flex; align-items: center; justify-content: center; overflow: hidden; transform: scale(0.8); transform-origin: center;"></div>
+        </div>
+      `;
+      gridContainer.appendChild(card);
+
+      // 동적 스크립트 실행
+      const wrapper = card.querySelector('#coupang-ad-wrapper');
+      const gScript = document.createElement('script');
+      gScript.src = "https://ads-partners.coupang.com/g.js";
+      gScript.async = true;
+      gScript.onload = () => {
+        const initScript = document.createElement('script');
+        initScript.innerHTML = `
+          new PartnersCoupang.G({
+            "id": 992906,
+            "template": "carousel",
+            "trackingCode": "AF8115760",
+            "subId": "membercard",
+            "width": "300",
+            "height": "280",
+            "tsource": ""
+          });
+        `;
+        wrapper.appendChild(initScript);
+      };
+      wrapper.appendChild(gScript);
+      return;
+    }
+
+    const member = item;
     const card = document.createElement('article');
     card.className = 'member-card';
     const genColor = getGenerationColor(member.generation);
@@ -5786,3 +5835,35 @@ async function pollNewMessages() {
     console.error("신규 쪽지 폴링 실패:", err);
   }
 }
+
+// ==================== 쿠팡 광고 삽입을 위한 그리드 반응형 헬퍼 ====================
+
+// 현재 화면 크기에 따른 그리드 열 개수 반환
+function getGridCols() {
+  const width = window.innerWidth;
+  if (width > 1100) {
+    return 3; // 데스크톱 기본 -> 3열
+  } else if (width > 900) {
+    return 2; // 데스크톱 좁은 화면 -> 2열
+  } else if (width > 750) {
+    return 3; // 모바일 기본 (사이드바 접힘) -> 3열
+  } else if (width > 500) {
+    return 2; // 모바일 좁은 화면 -> 2열
+  } else {
+    return 1; // 모바일 세로 -> 1열
+  }
+}
+
+// 창 크기가 변경되어 열(Column) 개수가 바뀌었을 때만 리렌더링 실행 (성능 최적화)
+let lastGridCols = getGridCols();
+window.addEventListener('resize', () => {
+  const currentCols = getGridCols();
+  if (currentCols !== lastGridCols) {
+    lastGridCols = currentCols;
+    // 디렉토리 탭이 활성화되어 있을 때만 갱신
+    const activeTab = state.activeTab || 'directory'; // 혹은 현재 탭 상태 변수 확인
+    if (activeTab === 'directory') {
+      renderMembersGrid();
+    }
+  }
+});

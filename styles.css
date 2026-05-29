@@ -721,7 +721,7 @@ a {
 /* 1. GRID VIEW (기본 카드 그리드형 - 대용량 콤팩트 스케일링) */
 .members-grid.grid-view {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* 최소 크기를 220px로 다소 줄여 3-4열 유도 */
+  grid-template-columns: repeat(3, 1fr); /* 데스크톱 (사이드바 있음) -> 기본 3열 */
   gap: 1rem;
 }
 
@@ -1645,6 +1645,10 @@ html[data-theme="dark"] .list-view .member-card:hover {
   .directory-layout {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .members-grid.grid-view {
+    grid-template-columns: repeat(3, 1fr) !important; /* 사이드바 접히므로 공간 확보되어 다시 3열 */
   }
 
   /* 모바일 필터 및 설정 토글 버튼 노출 */
@@ -4398,6 +4402,25 @@ html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16,
 
 .dm-write-btn:active {
   transform: translateY(0);
+}
+
+/* ==================== 쿠팡 광고 그리드 반응형 보정 ==================== */
+@media (max-width: 1100px) and (min-width: 901px) {
+  .members-grid.grid-view {
+    grid-template-columns: repeat(2, 1fr) !important; /* 데스크톱 좁은 화면 -> 2열 */
+  }
+}
+
+@media (max-width: 750px) {
+  .members-grid.grid-view {
+    grid-template-columns: repeat(2, 1fr) !important; /* 모바일 중간 화면 -> 2열 */
+  }
+}
+
+@media (max-width: 500px) {
+  .members-grid.grid-view {
+    grid-template-columns: 1fr !important; /* 모바일 세로 좁은 화면 -> 1열 */
+  }
 }
 
 
