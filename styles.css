@@ -2063,6 +2063,32 @@ html[data-theme="dark"] .list-view .member-card:hover {
   #adminInquirySection table {
     table-layout: auto !important;
   }
+
+  /* ---- 모바일 대시보드 테이블 가로 스크롤 및 셀 줄바꿈 방지 ---- */
+  .admin-member-table th,
+  .admin-member-table td {
+    white-space: nowrap !important;
+  }
+
+  /* 권한 열 뱃지와 스위치 가로 한 줄로 유지 */
+  .admin-member-table td div {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0.4rem !important;
+  }
+
+  .admin-role-badge,
+  .admin-toggle-switch {
+    flex-shrink: 0 !important;
+  }
+
+  /* 관리 버튼 그룹 줄바꿈 방지 */
+  .admin-member-table td div button {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
 }
 
 /* ==================== 모바일 전용 (≤480px) ==================== */
