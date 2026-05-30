@@ -2677,10 +2677,15 @@ function openProfileModal(memberId) {
     });
   }
 
-  // 2. 편집 권한 체크 (상세 페이지 내의 직접 수정 버튼은 완전히 제거합니다. 관리자도 운영 관리 탭에서만 수정합니다.)
+  // 2. 편집 권한 체크 (자기 자신의 프로필인 경우 또는 관리자인 경우에만 수정 버튼을 노출합니다)
   const editBtn = document.getElementById('editProfileBtn');
   if (editBtn) {
-    editBtn.classList.add('hidden');
+    const isSelf = state.currentUser && state.currentUser.id === member.id;
+    if (isSelf || state.isAdmin) {
+      editBtn.classList.remove('hidden');
+    } else {
+      editBtn.classList.add('hidden');
+    }
   }
 
   // 3. 편집 모드 양식 데이터 채워넣기 (이름, 전공, 기수, 자유기재 추가)
@@ -2777,16 +2782,18 @@ function cancelEditing() {
 async function saveProfileData(e) {
   e.preventDefault();
   
-  if (!state.isAdmin) {
-    alert("프로필 수정 권한이 없습니다. (운영진만 프로필 수정이 가능합니다)");
-    cancelEditing();
-    return;
-  }
-  
   const memberIndex = state.members.findIndex(m => m.id === state.selectedMemberId);
   if (memberIndex === -1) return;
 
   const member = state.members[memberIndex];
+
+  // 수정 권한 체크: 운영진이거나, 로그인한 유저 본인인 경우에만 허용
+  const isSelf = state.currentUser && state.currentUser.id === member.id;
+  if (!state.isAdmin && !isSelf) {
+    alert("프로필 수정 권한이 없습니다. (본인의 프로필만 수정이 가능합니다)");
+    cancelEditing();
+    return;
+  }
 
   // 값 추출
   const nextName = document.getElementById('editName').value.trim();
