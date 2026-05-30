@@ -3000,6 +3000,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
   border-collapse: collapse;
   text-align: left;
   font-size: 0.88rem;
+  table-layout: auto;
 }
 
 .admin-member-table th {
@@ -3009,6 +3010,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
   padding: 0.55rem 1rem;
   border-bottom: 2px solid var(--color-border);
   font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .admin-member-table td {
@@ -3017,6 +3019,17 @@ html[data-theme="dark"] .list-view .member-card:hover {
   color: var(--color-text-main);
   vertical-align: middle;
   font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* 데스크톱 권한 셀 및 관리 버튼 찌러짐 방지 */
+.admin-member-table td div {
+  flex-wrap: nowrap;
+}
+
+.admin-member-table td div button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .admin-member-table tbody tr:hover {
@@ -3035,6 +3048,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
   border-radius: 20px;
   font-size: 0.7rem;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .admin-filter-select {
@@ -3065,6 +3079,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
   display: inline-block;
   width: 44px;
   height: 22px;
+  flex-shrink: 0;
 }
 
 .admin-toggle-switch input {
