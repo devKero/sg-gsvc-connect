@@ -61,6 +61,7 @@
       </div>
 
       <button id="guestLoginBtn" class="btn btn-light btn-full"><i class="fa-solid fa-eye"></i> 게스트로 접속하기</button>
+      <button id="openSignupModalBtn" class="btn btn-light btn-full" type="button" style="margin-top: 0.6rem; border-color: rgba(197,160,89,0.45); color: var(--color-sogang-gold); font-weight: 700;"><i class="fa-solid fa-user-plus"></i> 회원 가입 신청</button>
 
       <div class="login-footer">
         <p>© 2026 서강대학교 가상융합전문대학원 (GSVC)</p>
@@ -304,6 +305,9 @@
           <div class="admin-sub-tab-menu" style="display: flex; gap: 0.4rem; padding: 0.6rem 1.25rem 0.35rem 1.25rem; border-bottom: 1px solid var(--color-border);">
             <button id="adminMemTabActive" class="btn btn-sm" style="background: none; border: none; border-bottom: 3px solid var(--color-sogang); border-radius: 0; padding: 0.5rem 1rem; font-weight: 700; color: var(--color-sogang); cursor: pointer;">
               활성 회원 (<span id="adminActiveMemCount">0</span>)
+            </button>
+            <button id="adminMemTabPending" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">
+              <i class="fa-solid fa-user-clock"></i> 승인 대기 (<span id="adminPendingMemCount">0</span>)
             </button>
             <button id="adminMemTabTrash" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">
               <i class="fa-solid fa-trash-can"></i> 휴지통 (<span id="adminTrashMemCount">0</span>)
@@ -623,6 +627,72 @@
           </form>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 회원 가입 신청 모달 ==================== -->
+  <div id="signupModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 540px;">
+      <button id="closeSignupModalBtn" class="modal-close-btn" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-content" style="padding: 2rem;">
+        <h2 style="margin-bottom: 0.2rem; font-size: 1.25rem; font-weight: 700;"><i class="fa-solid fa-user-clock text-gold"></i> 회원 가입 신청</h2>
+        <p class="edit-hint" style="margin-bottom: 1.2rem;">신청 정보는 운영진 승인 후 디렉토리에 반영되며, 승인 전에는 로그인할 수 없습니다.</p>
+
+        <form id="signupForm" class="edit-form">
+          <div class="form-row split split-2">
+            <div class="form-group">
+              <label for="signupStudentId">학번</label>
+              <input type="text" id="signupStudentId" required placeholder="예: v2026105" autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label for="signupName">이름</label>
+              <input type="text" id="signupName" required placeholder="예: 홍길동">
+            </div>
+          </div>
+
+          <div class="form-row split split-2">
+            <div class="form-group">
+              <label for="signupPassword">비밀번호</label>
+              <input type="password" id="signupPassword" required minlength="4" placeholder="최소 4자리" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+              <label for="signupPasswordConfirm">비밀번호 확인</label>
+              <input type="password" id="signupPasswordConfirm" required minlength="4" placeholder="비밀번호 재입력" autocomplete="new-password">
+            </div>
+          </div>
+
+          <div class="form-row split split-2">
+            <div class="form-group">
+              <label for="signupGeneration">기수</label>
+              <input type="number" id="signupGeneration" min="1" max="100" placeholder="예: 9">
+            </div>
+            <div class="form-group">
+              <label for="signupDegreeProcess">학위 과정</label>
+              <input type="text" id="signupDegreeProcess" required placeholder="예: 석사">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="signupClassYear">전공 분야</label>
+            <input type="text" id="signupClassYear" required placeholder="예: 메타버스 전공">
+          </div>
+
+          <div class="form-group">
+            <label for="signupEmail">이메일 선택 입력</label>
+            <input type="email" id="signupEmail" placeholder="예: name@sogang.ac.kr">
+          </div>
+
+          <label style="display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.78rem; color: var(--color-text-sub); line-height: 1.5; margin-top: 0.2rem;">
+            <input type="checkbox" id="signupPrivacyAgree" required style="margin-top: 0.18rem;">
+            <span>가입 신청과 운영진 승인 처리를 위한 필수 정보 수집 및 이용에 동의합니다.</span>
+          </label>
+
+          <div class="edit-form-actions">
+            <button type="button" id="cancelSignupBtn" class="btn btn-light">취소</button>
+            <button type="submit" class="btn btn-sogang">가입 신청</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

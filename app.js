@@ -52,7 +52,7 @@ let state = {
   membersLimit: 12,            // 무한 스크롤 한 번에 노출될 회원 카드 개수
   adminActiveTab: 'members', // 어드민 하위 탭 ('members', 'inquiries', 'quick_links')
   adminInquirySubTab: 'active', // 어드민 문의 하위 탭 ('active', 'trash')
-  adminMemberSubTab: 'active',  // 어드민 회원 하위 탭 ('active', 'trash')
+  adminMemberSubTab: 'active',  // 어드민 회원 하위 탭 ('active', 'pending', 'trash')
   editingLinkId: null,          // 수정중인 퀵링크 ID
   dmPollingInterval: null,      // DM 폴링 타이머
   alertedMessageIds: null       // 이미 확인/알림 띄운 쪽지 ID 목록
@@ -776,9 +776,25 @@ function checkSession() {
     // members에서 로그인된 멤버 객체 찾기
     const userMember = state.members.find(m => m.id === state.currentUser.id);
     if (userMember) {
+      if (userMember.role === "deleted" || userMember.role === "pending") {
+        sessionStorage.removeItem('sogang_unity_session');
+        state.currentUser = null;
+        state.isAdmin = false;
+        state.isSuperAdmin = false;
+        showLoginGate();
+        return;
+      }
       state.isAdmin = (userMember.role === "super_admin" || userMember.role === "admin");
       state.isSuperAdmin = (userMember.role === "super_admin");
     } else {
+      if (!state.currentUser.isGuest) {
+        sessionStorage.removeItem('sogang_unity_session');
+        state.currentUser = null;
+        state.isAdmin = false;
+        state.isSuperAdmin = false;
+        showLoginGate();
+        return;
+      }
       state.isAdmin = false;
       state.isSuperAdmin = false;
     }
@@ -836,6 +852,31 @@ function setupEventListeners() {
   
   // 게스트 로그인 클릭
   document.getElementById('guestLoginBtn').addEventListener('click', handleGuestLogin);
+
+  const openSignupBtn = document.getElementById('openSignupModalBtn');
+  if (openSignupBtn) {
+    openSignupBtn.addEventListener('click', openSignupModal);
+  }
+  const closeSignupBtn = document.getElementById('closeSignupModalBtn');
+  if (closeSignupBtn) {
+    closeSignupBtn.addEventListener('click', closeSignupModal);
+  }
+  const cancelSignupBtn = document.getElementById('cancelSignupBtn');
+  if (cancelSignupBtn) {
+    cancelSignupBtn.addEventListener('click', closeSignupModal);
+  }
+  const signupModal = document.getElementById('signupModal');
+  if (signupModal) {
+    signupModal.addEventListener('click', (e) => {
+      if (e.target.id === 'signupModal') {
+        closeSignupModal();
+      }
+    });
+  }
+  const signupForm = document.getElementById('signupForm');
+  if (signupForm) {
+    signupForm.addEventListener('submit', handleSignupSubmit);
+  }
   
   // 로그아웃 클릭
   document.getElementById('logoutBtn').addEventListener('click', handleLogout);
@@ -1354,6 +1395,10 @@ function setupEventListeners() {
   if (adminMemTabActive) {
     adminMemTabActive.addEventListener('click', () => switchAdminMemberSubTab('active'));
   }
+  const adminMemTabPending = document.getElementById('adminMemTabPending');
+  if (adminMemTabPending) {
+    adminMemTabPending.addEventListener('click', () => switchAdminMemberSubTab('pending'));
+  }
   const adminMemTabTrash = document.getElementById('adminMemTabTrash');
   if (adminMemTabTrash) {
     adminMemTabTrash.addEventListener('click', () => switchAdminMemberSubTab('trash'));
@@ -1455,7 +1500,7 @@ function setupEventListeners() {
     
     dmReceiverSearchInput.addEventListener('input', (e) => {
       const currentVal = e.target.value;
-      const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted');
+      const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted' && m.role !== 'pending');
       const exactMatch = activeMembers.find(m => `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${m.studentId})` === currentVal);
       if (exactMatch) {
         document.getElementById('dmReceiverSelect').value = exactMatch.id;
@@ -1549,6 +1594,132 @@ function setupEventListeners() {
 
   // 무한 스크롤 설정
   setupInfiniteScroll();
+}
+
+// ==================== 회원 가입 신청 처리 ====================
+function openSignupModal() {
+  const form = document.getElementById('signupForm');
+  if (form) form.reset();
+  const modal = document.getElementById('signupModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeSignupModal() {
+  const modal = document.getElementById('signupModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
+
+async function handleSignupSubmit(e) {
+  e.preventDefault();
+
+  const studentId = document.getElementById('signupStudentId').value.trim();
+  const name = document.getElementById('signupName').value.trim();
+  const password = document.getElementById('signupPassword').value.trim();
+  const passwordConfirm = document.getElementById('signupPasswordConfirm').value.trim();
+  const generationVal = document.getElementById('signupGeneration').value.trim();
+  const degreeProcess = document.getElementById('signupDegreeProcess').value.trim();
+  const classYear = document.getElementById('signupClassYear').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+
+  if (!studentId || !name || !password || !degreeProcess || !classYear) {
+    alert("필수 항목을 모두 입력해 주세요.");
+    return;
+  }
+
+  if (password.length < 4) {
+    alert("비밀번호는 최소 4자리 이상이어야 합니다.");
+    return;
+  }
+
+  if (password !== passwordConfirm) {
+    alert("비밀번호 확인이 일치하지 않습니다.");
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    return;
+  }
+
+  const isDuplicate = state.members.some(m => (m.studentId || "").toLowerCase() === studentId.toLowerCase());
+  if (isDuplicate) {
+    alert("이미 등록 또는 신청된 학번입니다. 운영진에게 문의해 주세요.");
+    return;
+  }
+
+  let generation = null;
+  if (generationVal) {
+    generation = parseInt(generationVal, 10);
+    if (isNaN(generation)) generation = null;
+  }
+
+  const newMember = {
+    id: `member_${Date.now()}`,
+    studentId,
+    phoneLast4: password,
+    name,
+    email,
+    classYear,
+    generation,
+    headline: "운영진 승인 대기 중인 가입 신청입니다.",
+    avatarColor: getRandomAvatarColor(),
+    snsLinks: [],
+    tags: [],
+    bio: "",
+    projects: "",
+    customContent: "",
+    avatarImage: null,
+    degreeProcess,
+    academicStatus: "",
+    education: "",
+    experience: "",
+    role: "pending"
+  };
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('members')
+        .insert([{
+          id: newMember.id,
+          student_id: newMember.studentId,
+          phone_last4: newMember.phoneLast4,
+          name: newMember.name,
+          email: newMember.email,
+          class_year: newMember.classYear,
+          generation: newMember.generation,
+          headline: newMember.headline,
+          avatar_color: newMember.avatarColor,
+          sns_links: newMember.snsLinks,
+          tags: newMember.tags,
+          bio: newMember.bio,
+          projects: newMember.projects,
+          custom_content: newMember.customContent,
+          avatar_image: newMember.avatarImage,
+          degree_process: newMember.degreeProcess,
+          academic_status: newMember.academicStatus,
+          education: newMember.education,
+          experience: newMember.experience,
+          role: newMember.role
+        }]);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Supabase 가입 신청 저장 실패:", err);
+      alert("가입 신청 저장 중 오류가 발생했습니다. 학번 중복 여부를 확인하거나 운영진에게 문의해 주세요.");
+      return;
+    }
+  }
+
+  state.members.push(newMember);
+  localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+  closeSignupModal();
+  alert("가입 신청이 접수되었습니다. 운영진 승인 후 로그인할 수 있습니다.");
 }
 
 // 더보기 버튼 클릭 시 다음 페이지 멤버 추가 로드
@@ -1662,6 +1833,11 @@ function handleLogin(e) {
   if (matchedMember) {
     if (matchedMember.role === 'deleted') {
       errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> 삭제되었거나 비활성화된 계정입니다.`;
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (matchedMember.role === 'pending') {
+      errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> 가입 신청이 운영진 승인 대기 중입니다. 승인 후 로그인할 수 있습니다.`;
       errorEl.classList.remove('hidden');
       return;
     }
@@ -1966,14 +2142,17 @@ function renderAdminDashboard() {
 
   const nonAdminMembers = state.members.filter(m => m.id !== 'admin');
   
-  // 활성 회원 및 휴지통 회원 분리
-  const activeMembers = nonAdminMembers.filter(m => m.role !== 'deleted');
+  // 활성 회원, 승인 대기, 휴지통 회원 분리
+  const activeMembers = nonAdminMembers.filter(m => m.role !== 'deleted' && m.role !== 'pending');
+  const pendingMembers = nonAdminMembers.filter(m => m.role === 'pending');
   const trashMembers = nonAdminMembers.filter(m => m.role === 'deleted');
 
-  // 활성/휴지통 서브탭 뱃지 개수 업데이트
+  // 활성/승인 대기/휴지통 서브탭 뱃지 개수 업데이트
   const activeCountEl = document.getElementById('adminActiveMemCount');
+  const pendingCountEl = document.getElementById('adminPendingMemCount');
   const trashCountEl = document.getElementById('adminTrashMemCount');
   if (activeCountEl) activeCountEl.innerText = String(activeMembers.length);
+  if (pendingCountEl) pendingCountEl.innerText = String(pendingMembers.length);
   if (trashCountEl) trashCountEl.innerText = String(trashMembers.length);
 
   // 운영 기수 필터 드롭다운 동적 갱신 (선택 상태 보존, 활성 회원 기준)
@@ -2017,7 +2196,9 @@ function renderAdminDashboard() {
   tbody.innerHTML = "";
 
   // 현재 활성화된 서브탭에 따른 회원 소스 정의
-  const currentMembersSource = (state.adminMemberSubTab === 'trash') ? trashMembers : activeMembers;
+  const currentMembersSource = state.adminMemberSubTab === 'trash'
+    ? trashMembers
+    : (state.adminMemberSubTab === 'pending' ? pendingMembers : activeMembers);
 
   // 실시간 검색어, 기수 필터, 권한 필터 AND 조건 적용
   const filtered = currentMembersSource.filter(m => {
@@ -2037,7 +2218,7 @@ function renderAdminDashboard() {
 
     // 3) 권한 매칭
     let matchesRole = true;
-    if (state.adminMemberSubTab !== 'trash' && state.adminSelectedRole) {
+    if (state.adminMemberSubTab === 'active' && state.adminSelectedRole) {
       const role = state.adminSelectedRole;
       if (role === 'super_admin') {
         matchesRole = m.role === 'super_admin';
@@ -2078,6 +2259,8 @@ function renderAdminDashboard() {
       roleBadgeHtml = `<span class="admin-role-badge super-admin"><i class="fa-solid fa-crown"></i> 시스템 관리</span>`;
     } else if (member.role === "admin") {
       roleBadgeHtml = `<span class="admin-role-badge admin"><i class="fa-solid fa-user-shield"></i> 운영진</span>`;
+    } else if (member.role === "pending") {
+      roleBadgeHtml = `<span class="admin-role-badge pending" style="background-color: rgba(197,160,89,0.18); color: var(--color-sogang-gold);"><i class="fa-solid fa-user-clock"></i> 승인 대기</span>`;
     } else if (member.role === "deleted") {
       roleBadgeHtml = `<span class="admin-role-badge deleted" style="background-color: var(--color-text-dim); color: #fff;"><i class="fa-solid fa-ban"></i> 삭제됨</span>`;
     } else {
@@ -2086,8 +2269,8 @@ function renderAdminDashboard() {
 
     const isChecked = member.role === "admin" || member.role === "super_admin";
     const isSuperAdminDisabled = member.role === "super_admin";
-    // 최고 운영진만 권한 토글을 변경할 수 있고, 휴지통 탭인 경우에는 토글 불가
-    const isToggleDisabled = !state.isSuperAdmin || isSuperAdminDisabled || state.adminMemberSubTab === 'trash';
+    // 최고 운영진만 권한 토글을 변경할 수 있고, 승인 대기/휴지통 탭인 경우에는 토글 불가
+    const isToggleDisabled = !state.isSuperAdmin || isSuperAdminDisabled || state.adminMemberSubTab !== 'active';
 
     const toggleHtml = `
       <label class="admin-toggle-switch">
@@ -2099,7 +2282,18 @@ function renderAdminDashboard() {
     `;
 
     let manageButtonsHtml = "";
-    if (state.adminMemberSubTab === 'trash') {
+    if (state.adminMemberSubTab === 'pending') {
+      manageButtonsHtml = `
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-sogang btn-sm admin-approve-btn" data-id="${member.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px;">
+            <i class="fa-solid fa-check"></i> 승인
+          </button>
+          <button class="btn btn-light btn-sm admin-reject-btn" data-id="${member.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2);">
+            <i class="fa-solid fa-ban"></i> 반려
+          </button>
+        </div>
+      `;
+    } else if (state.adminMemberSubTab === 'trash') {
       manageButtonsHtml = `
         <div style="display: flex; gap: 0.5rem;">
           <button class="btn btn-light btn-sm admin-restore-btn" data-id="${member.id}" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-radius: 4px; color: var(--color-sogang-gold); border-color: rgba(197,160,89,0.3);">
@@ -2153,7 +2347,14 @@ function renderAdminDashboard() {
       });
     }
 
-    if (state.adminMemberSubTab === 'trash') {
+    if (state.adminMemberSubTab === 'pending') {
+      tr.querySelector('.admin-approve-btn').addEventListener('click', () => {
+        handleApproveMember(member.id, member.name);
+      });
+      tr.querySelector('.admin-reject-btn').addEventListener('click', () => {
+        handleRejectSignup(member.id, member.name);
+      });
+    } else if (state.adminMemberSubTab === 'trash') {
       // 복구 버튼 이벤트
       tr.querySelector('.admin-restore-btn').addEventListener('click', () => {
         handleRestoreMember(member.id, member.name);
@@ -2247,7 +2448,7 @@ function renderFilterSelectorsOptions() {
     genSelect.innerHTML = '<option value="">전체 기수</option>';
 
     const gens = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.generation)
+      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending' && m.generation)
       .map(m => m.generation)
     )].sort((a, b) => a - b);
 
@@ -2267,7 +2468,7 @@ function renderFilterSelectorsOptions() {
     majorSelect.innerHTML = '<option value="">전체 전공</option>';
 
     const majors = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.classYear)
+      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending' && m.classYear)
       .map(m => m.classYear)
     )].sort();
 
@@ -2287,7 +2488,7 @@ function renderFilterSelectorsOptions() {
     degreeSelect.innerHTML = '<option value="">전체 과정</option>';
 
     const degrees = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.degreeProcess)
+      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending' && m.degreeProcess)
       .map(m => m.degreeProcess)
     )].sort();
 
@@ -2314,6 +2515,7 @@ function renderMembersGrid(resetLimit = false) {
   const filtered = state.members.filter(member => {
     if (member.id === 'admin') return false;
     if (member.role === 'deleted') return false;
+    if (member.role === 'pending') return false;
 
     // 1. 검색어 필터링 (이름, 헤드라인, 태그, 소개글, 자유 기재 내용, SNS 링크)
     const matchesSearch = 
@@ -2498,7 +2700,7 @@ function renderFilterTags() {
 
   const allTagsMap = {};
   state.members
-    .filter(m => m.id !== 'admin')
+    .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending')
     .filter(member => {
       if (state.selectedGeneration && String(member.generation) !== state.selectedGeneration) {
         return false;
@@ -3071,6 +3273,91 @@ async function handleAddMemberSubmit(e) {
   renderAdminDashboard();
 
   alert(`${name} 님이 디렉토리의 ${generation}기 구성원으로 성공적으로 추가되었습니다.`);
+}
+
+// 가입 신청 승인 처리
+async function handleApproveMember(memberId, name) {
+  if (!confirm(`[${name}] 님의 가입 신청을 승인하시겠습니까?`)) return;
+
+  const member = state.members.find(m => m.id === memberId);
+  if (!member) return;
+
+  member.role = "member";
+  member.deletedAt = null;
+  if (member.headline === "운영진 승인 대기 중인 가입 신청입니다.") {
+    member.headline = "서강대 가상융합전문대학원 원우";
+  }
+  localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('members')
+        .update({
+          role: "member",
+          headline: member.headline,
+          deleted_at: null
+        })
+        .eq('id', memberId);
+
+      if (error) {
+        const { error: retryError } = await supabaseClient
+          .from('members')
+          .update({
+            role: "member",
+            headline: member.headline
+          })
+          .eq('id', memberId);
+        if (retryError) throw retryError;
+      }
+    } catch (err) {
+      console.error("Supabase 가입 승인 에러:", err);
+      alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+    }
+  }
+
+  renderFilterSelectorsOptions();
+  renderMembersGrid(true);
+  renderFilterTags();
+  renderAdminDashboard();
+
+  alert(`[${name}] 님의 가입 신청이 승인되었습니다.`);
+}
+
+// 가입 신청 반려 처리
+async function handleRejectSignup(memberId, name) {
+  if (!confirm(`[${name}] 님의 가입 신청을 반려하시겠습니까?\n반려된 신청은 휴지통으로 이동합니다.`)) return;
+
+  const member = state.members.find(m => m.id === memberId);
+  const nowIso = new Date().toISOString();
+  if (!member) return;
+
+  member.role = "deleted";
+  member.deletedAt = nowIso;
+  localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('members')
+        .update({ role: "deleted", deleted_at: nowIso })
+        .eq('id', memberId);
+
+      if (error) {
+        const { error: retryError } = await supabaseClient
+          .from('members')
+          .update({ role: "deleted" })
+          .eq('id', memberId);
+        if (retryError) throw retryError;
+      }
+    } catch (err) {
+      console.error("Supabase 가입 반려 에러:", err);
+      alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
+    }
+  }
+
+  renderAdminDashboard();
+  alert(`[${name}] 님의 가입 신청이 반려되었습니다.`);
 }
 
 // 멤버 삭제 처리 핸들러 (Soft Delete: 휴지통 이동)
@@ -4417,24 +4704,24 @@ function switchAdminActiveTab(tab) {
 function switchAdminMemberSubTab(subTab) {
   state.adminMemberSubTab = subTab;
   const btnActive = document.getElementById('adminMemTabActive');
+  const btnPending = document.getElementById('adminMemTabPending');
   const btnTrash = document.getElementById('adminMemTabTrash');
-  if (!btnActive || !btnTrash) return;
+  if (!btnActive || !btnPending || !btnTrash) return;
 
-  if (subTab === 'active') {
-    btnActive.style.borderBottom = '3px solid var(--color-sogang)';
-    btnActive.style.fontWeight = '700';
-    btnActive.style.color = 'var(--color-sogang)';
-    btnTrash.style.borderBottom = 'none';
-    btnTrash.style.fontWeight = '500';
-    btnTrash.style.color = 'var(--color-text-sub)';
-  } else {
-    btnTrash.style.borderBottom = '3px solid var(--color-sogang)';
-    btnTrash.style.fontWeight = '700';
-    btnTrash.style.color = 'var(--color-sogang)';
-    btnActive.style.borderBottom = 'none';
-    btnActive.style.fontWeight = '500';
-    btnActive.style.color = 'var(--color-text-sub)';
-  }
+  [btnActive, btnPending, btnTrash].forEach(btn => {
+    btn.style.borderBottom = 'none';
+    btn.style.fontWeight = '500';
+    btn.style.color = 'var(--color-text-sub)';
+  });
+
+  const activeBtn = subTab === 'pending'
+    ? btnPending
+    : (subTab === 'trash' ? btnTrash : btnActive);
+
+  activeBtn.style.borderBottom = '3px solid var(--color-sogang)';
+  activeBtn.style.fontWeight = '700';
+  activeBtn.style.color = 'var(--color-sogang)';
+
   renderAdminDashboard();
 }
 
@@ -5360,7 +5647,7 @@ function renderReceiverDropdown(filterText = "") {
   if (!listContainer) return;
   listContainer.innerHTML = "";
 
-  const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted');
+  const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted' && m.role !== 'pending');
   activeMembers.sort((a, b) => {
     const genA = a.generation || 999;
     const genB = b.generation || 999;
