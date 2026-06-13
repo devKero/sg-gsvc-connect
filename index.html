@@ -61,7 +61,7 @@
       </div>
 
       <button id="guestLoginBtn" class="btn btn-light btn-full"><i class="fa-solid fa-eye"></i> 게스트로 접속하기</button>
-      <button id="openSignupModalBtn" class="btn btn-light btn-full" type="button" style="margin-top: 0.6rem; border-color: rgba(197,160,89,0.45); color: var(--color-sogang-gold); font-weight: 700;"><i class="fa-solid fa-user-plus"></i> 회원 가입 신청</button>
+      <button id="openSignupModalBtn" class="btn btn-light btn-full" type="button" disabled style="margin-top: 0.6rem; border-color: var(--color-border); color: var(--color-text-dim); font-weight: 500; cursor: not-allowed; background-color: var(--color-bg-input);"><i class="fa-solid fa-user-plus"></i> 회원 가입 신청 (추후 오픈 예정)</button>
 
       <div class="login-footer">
         <p>© 2026 서강대학교 가상융합전문대학원 (GSVC)</p>
@@ -640,7 +640,7 @@
         <p class="edit-hint" style="margin-bottom: 1.2rem;">신청 정보는 운영진 승인 후 디렉토리에 반영되며, 승인 전에는 로그인할 수 없습니다.</p>
 
         <form id="signupForm" class="edit-form">
-          <div class="form-row split split-2">
+          <div class="form-row split-2">
             <div class="form-group">
               <label for="signupStudentId">학번</label>
               <input type="text" id="signupStudentId" required placeholder="예: v2026105" autocomplete="username">
@@ -651,7 +651,7 @@
             </div>
           </div>
 
-          <div class="form-row split split-2">
+          <div class="form-row split-2">
             <div class="form-group">
               <label for="signupPassword">비밀번호</label>
               <input type="password" id="signupPassword" required minlength="4" placeholder="최소 4자리" autocomplete="new-password">
@@ -662,7 +662,7 @@
             </div>
           </div>
 
-          <div class="form-row split split-2">
+          <div class="form-row split-2">
             <div class="form-group">
               <label for="signupGeneration">기수</label>
               <input type="number" id="signupGeneration" min="1" max="100" placeholder="예: 9">
@@ -721,7 +721,7 @@
             </div>
           </div>
 
-          <div class="form-row split split-2">
+          <div class="form-row split-2">
             <div class="form-group">
               <label for="addName">이름</label>
               <input type="text" id="addName" placeholder="예: 홍길동">

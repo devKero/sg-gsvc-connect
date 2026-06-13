@@ -1598,13 +1598,7 @@ function setupEventListeners() {
 
 // ==================== 회원 가입 신청 처리 ====================
 function openSignupModal() {
-  const form = document.getElementById('signupForm');
-  if (form) form.reset();
-  const modal = document.getElementById('signupModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
+  alert("회원 가입 신청은 추후 필요 시 오픈될 예정입니다.");
 }
 
 function closeSignupModal() {

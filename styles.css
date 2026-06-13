@@ -1601,7 +1601,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
 
 .form-row.split-2 {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
 
