@@ -43,8 +43,12 @@
           <input type="text" id="studentId" required autocomplete="username" placeholder="학번을 입력해 주세요 (예: v2026101)">
         </div>
         <div class="form-group">
-          <label for="phoneLast4">비밀번호 (일반 원우는 휴대폰 뒷자리 4자리)</label>
-          <input type="password" id="phoneLast4" required placeholder="비밀번호 또는 4자리 숫자 입력">
+          <label for="phoneLast4">비밀번호</label>
+          <input type="password" id="phoneLast4" required placeholder="비밀번호 또는 4자리 숫자 입력" autocomplete="current-password">
+          <p style="font-size: 0.72rem; color: var(--color-text-dim); line-height: 1.4; margin-top: 0.35rem; margin-bottom: 0; font-weight: 400;">
+            <i class="fa-solid fa-circle-info" style="margin-right: 0.2rem;"></i> 초기 비밀번호는 휴대폰 뒷자리 4자리입니다.<br>
+            <i class="fa-solid fa-circle-question" style="margin-right: 0.2rem;"></i> 비밀번호를 잊으신 경우 운영진에게 문의하시면 초기화해 드립니다.
+          </p>
         </div>
         <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem; margin-bottom: 1.2rem; cursor: pointer; user-select: none;">
           <input type="checkbox" id="rememberMe" style="cursor: pointer; width: 16px; height: 16px;">
