@@ -1812,19 +1812,38 @@ function closePrivacyModal() {
 }
 
 // ==================== 로그인 및 세션 처리 ====================
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const studentId = document.getElementById('studentId').value.trim();
   const phoneLast4 = document.getElementById('phoneLast4').value.trim();
   const errorEl = document.getElementById('loginError');
 
-  // 대소문자 무관 학번 비교, 뒷자리 비교
+  // 1. 입력된 패스워드 해싱
+  const hashedInput = await hashPassword(phoneLast4);
+
+  // 2. 대소문자 무관 학번 비교
   const matchedMember = state.members.find(m => 
-    m.studentId.toLowerCase() === studentId.toLowerCase() && 
-    m.phoneLast4 === phoneLast4
+    m.studentId.toLowerCase() === studentId.toLowerCase()
   );
 
+  let isPasswordCorrect = false;
+  let needMigration = false;
+
   if (matchedMember) {
+    const dbPassword = (matchedMember.phoneLast4 || "").trim();
+    if (dbPassword.length === 64) {
+      // 해시값 대조
+      isPasswordCorrect = (dbPassword === hashedInput);
+    } else {
+      // 기존 평문 대조 폴백
+      isPasswordCorrect = (dbPassword === phoneLast4);
+      if (isPasswordCorrect) {
+        needMigration = true; // 최초 로그인 성공 시 자동 마이그레이션 대상 지정
+      }
+    }
+  }
+
+  if (matchedMember && isPasswordCorrect) {
     if (matchedMember.role === 'deleted') {
       errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> 삭제되었거나 비활성화된 계정입니다.`;
       errorEl.classList.remove('hidden');
@@ -1837,6 +1856,27 @@ function handleLogin(e) {
     }
     errorEl.classList.add('hidden');
     
+    // 자동 마이그레이션 (비밀번호 해싱)
+    if (needMigration) {
+      matchedMember.phoneLast4 = hashedInput;
+      // 로컬 스토리지 업데이트
+      localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+      // Supabase 업데이트
+      if (supabaseClient !== null) {
+        supabaseClient
+          .from('members')
+          .update({ phone_last4: hashedInput })
+          .eq('id', matchedMember.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error("비밀번호 해싱 마이그레이션 실패:", error);
+            } else {
+              console.log("비밀번호가 안전하게 SHA-256 해시값으로 자동 갱신되었습니다.");
+            }
+          });
+      }
+    }
+
     // 로그인 정보 저장/삭제 처리
     const rememberMe = document.getElementById('rememberMe').checked;
     if (rememberMe) {
@@ -3186,11 +3226,14 @@ async function handleAddMemberSubmit(e) {
   const degreeProcess = document.getElementById('addDegreeProcess').value;
   const academicStatus = "";
 
+  // 비밀번호 해싱 처리
+  const hashedPassword = await hashPassword(phoneLast4);
+
   // 2. 신규 멤버 객체 빌드
   const newMember = {
     id: `member_${Date.now()}`,
     studentId,
-    phoneLast4,
+    phoneLast4: hashedPassword,
     name,
     email,
     classYear,
@@ -3979,6 +4022,9 @@ async function submitExcelData() {
       continue;
     }
 
+    const rawPhoneLast4 = String(row.phoneLast4).trim();
+    const hashedPassword = await hashPassword(rawPhoneLast4);
+
     const matchedIdx = state.members.findIndex(m => m.studentId.toLowerCase() === row.studentId.toLowerCase());
     const isDuplicate = matchedIdx !== -1;
 
@@ -3990,7 +4036,7 @@ async function submitExcelData() {
         targetMember.generation = row.generation;
         targetMember.classYear = row.classYear;
         targetMember.degreeProcess = row.degreeProcess;
-        targetMember.phoneLast4 = row.phoneLast4;
+        targetMember.phoneLast4 = hashedPassword;
         
         // 입력 칸이 비어있지 않으면 추가 정보도 병합
         if (row.headline) targetMember.headline = row.headline;
@@ -4011,7 +4057,7 @@ async function submitExcelData() {
       const newMember = {
         id: `member_${Date.now()}_${i}`,
         studentId: row.studentId,
-        phoneLast4: row.phoneLast4,
+        phoneLast4: hashedPassword,
         name: row.name,
         email: row.email || "",
         classYear: row.classYear,
@@ -4596,20 +4642,36 @@ async function handleChangePasswordSubmit(e) {
   // 3. 현재 비밀번호 검증
   // 로컬 members에서 나의 비밀번호와 같은지 대조
   const myMember = state.members.find(m => m.id === state.currentUser.id);
-  if (!myMember || myMember.phoneLast4 !== currentPw) {
+  if (!myMember) {
+    showPwError("사용자 정보를 찾을 수 없습니다.");
+    return;
+  }
+
+  const dbPassword = (myMember.phoneLast4 || "").trim();
+  let isCurrentPwCorrect = false;
+
+  if (dbPassword.length === 64) {
+    const hashedCurrentPw = await hashPassword(currentPw);
+    isCurrentPwCorrect = (dbPassword === hashedCurrentPw);
+  } else {
+    isCurrentPwCorrect = (dbPassword === currentPw);
+  }
+
+  if (!isCurrentPwCorrect) {
     showPwError("현재 비밀번호가 정확하지 않습니다.");
     return;
   }
 
   // 4. 비밀번호 업데이트 진행
-  myMember.phoneLast4 = newPw;
+  const hashedNewPw = await hashPassword(newPw);
+  myMember.phoneLast4 = hashedNewPw;
   localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
 
   if (supabaseClient) {
     try {
       const { error } = await supabaseClient
         .from('members')
-        .update({ phone_last4: newPw })
+        .update({ phone_last4: hashedNewPw })
         .eq('id', state.currentUser.id);
       if (error) throw error;
     } catch (err) {
@@ -4635,11 +4697,12 @@ async function resetMemberPassword(memberId, memberName) {
   if (!confirmed) return;
 
   const resetPw = "1234"; // 기본 비밀번호 1234로 초기화
+  const hashedResetPw = await hashPassword(resetPw);
 
   // 로컬 상태 변경
   const targetMember = state.members.find(m => m.id === memberId);
   if (targetMember) {
-    targetMember.phoneLast4 = resetPw;
+    targetMember.phoneLast4 = hashedResetPw;
     localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
   }
 
@@ -4648,10 +4711,10 @@ async function resetMemberPassword(memberId, memberName) {
     try {
       const { error } = await supabaseClient
         .from('members')
-        .update({ phone_last4: resetPw })
+        .update({ phone_last4: hashedResetPw })
         .eq('id', memberId);
       if (error) throw error;
-      alert(`[${memberName}] 원우의 비밀번호가 가입 시 전화번호 뒷자리 [${resetPw}] (으)로 성공적으로 초기화되었습니다.`);
+      alert(`[${memberName}] 원우의 비밀번호가 기본 비밀번호 [${resetPw}] (으)로 성공적으로 초기화되었습니다.`);
     } catch (err) {
       console.error("Supabase 비밀번호 초기화 서버 전송 실패:", err);
       alert("서버 연결 실패로 인해 로컬에서만 초기화되었습니다.");
