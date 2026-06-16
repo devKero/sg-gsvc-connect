@@ -1892,7 +1892,8 @@ async function handleLogin(e) {
       name: matchedMember.name,
       classYear: matchedMember.classYear,
       isGuest: false,
-      generation: matchedMember.generation || null
+      generation: matchedMember.generation || null,
+      passwordHash: hashedInput
     };
     
     sessionStorage.setItem('sogang_unity_session', JSON.stringify(state.currentUser));
@@ -3109,26 +3110,28 @@ async function saveProfileData(e) {
   if (isSupabaseActive) {
     try {
       const { error } = await supabaseClient
-        .from('members')
-        .update({
-          name: member.name,
-          email: member.email,
-          class_year: member.classYear,
-          generation: member.generation,
-          headline: member.headline,
-          sns_links: member.snsLinks,
-          tags: member.tags,
-          bio: member.bio,
-          projects: member.projects,
-          custom_content: member.customContent,
-          avatar_image: member.avatarImage,
-          degree_process: member.degreeProcess,
-          academic_status: member.academicStatus,
-          education: member.education,
-          experience: member.experience,
-          role: member.role
-        })
-        .eq('id', member.id);
+        .rpc('rpc_update_member_profile', {
+          p_request_id: state.currentUser ? state.currentUser.id : member.id,
+          p_member_id: member.id,
+          p_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_update_data: {
+            name: member.name,
+            email: member.email,
+            classYear: member.classYear,
+            generation: member.generation,
+            headline: member.headline,
+            snsLinks: member.snsLinks,
+            tags: member.tags,
+            bio: member.bio,
+            projects: member.projects,
+            customContent: member.customContent,
+            avatarImage: member.avatarImage,
+            degreeProcess: member.degreeProcess,
+            academicStatus: member.academicStatus,
+            education: member.education,
+            experience: member.experience
+          }
+        });
 
       if (error) throw error;
     } catch (err) {
@@ -3272,28 +3275,31 @@ async function handleAddMemberSubmit(e) {
   if (isSupabaseActive) {
     try {
       const { error } = await supabaseClient
-        .from('members')
-        .insert([{
-          id: newMember.id,
-          student_id: newMember.studentId,
-          password: newMember.password,
-          name: newMember.name,
-          class_year: newMember.classYear,
-          generation: newMember.generation,
-          headline: newMember.headline,
-          avatar_color: newMember.avatarColor,
-          sns_links: newMember.snsLinks,
-          tags: newMember.tags,
-          bio: newMember.bio,
-          projects: newMember.projects,
-          custom_content: newMember.customContent,
-          avatar_image: newMember.avatarImage,
-          degree_process: newMember.degreeProcess,
-          academic_status: newMember.academicStatus,
-          education: newMember.education,
-          experience: newMember.experience,
-          role: newMember.role
-        }]);
+        .rpc('rpc_insert_member', {
+          p_admin_id: state.currentUser ? state.currentUser.id : "",
+          p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_new_member: {
+            id: newMember.id,
+            studentId: newMember.studentId,
+            password: newMember.password,
+            name: newMember.name,
+            classYear: newMember.classYear,
+            generation: newMember.generation,
+            headline: newMember.headline,
+            avatarColor: newMember.avatarColor,
+            snsLinks: newMember.snsLinks,
+            tags: newMember.tags,
+            bio: newMember.bio,
+            projects: newMember.projects,
+            customContent: newMember.customContent,
+            avatarImage: newMember.avatarImage,
+            degreeProcess: newMember.degreeProcess,
+            academicStatus: newMember.academicStatus,
+            education: newMember.education,
+            experience: newMember.experience,
+            role: newMember.role
+          }
+        });
 
       if (error) throw error;
     } catch (err) {
@@ -4090,55 +4096,58 @@ async function submitExcelData() {
   const isSupabaseActive = supabaseClient !== null;
   if (isSupabaseActive) {
     try {
-      // 1. 신규 멤버 bulk insert
+      // 1. 신규 멤버 bulk insert ➔ RPC 루프 호출로 보안 삽입
       if (toInsertList.length > 0) {
-        const { error: insertError } = await supabaseClient
-          .from('members')
-          .insert(toInsertList.map(m => ({
-            id: m.id,
-            student_id: m.studentId,
-            password: m.password,
-            name: m.name,
-            email: m.email || "",
-            class_year: m.classYear,
-            generation: m.generation,
-            headline: m.headline,
-            avatar_color: m.avatarColor,
-            sns_links: m.snsLinks,
-            tags: m.tags,
-            bio: m.bio,
-            projects: m.projects,
-            custom_content: m.customContent,
-            avatar_image: m.avatarImage,
-            degree_process: m.degreeProcess,
-            academic_status: m.academicStatus,
-            education: m.education,
-            experience: m.experience,
-            role: m.role
-          })));
-        if (insertError) throw insertError;
+        for (const m of toInsertList) {
+          const { error } = await supabaseClient.rpc('rpc_insert_member', {
+            p_admin_id: state.currentUser ? state.currentUser.id : "",
+            p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+            p_new_member: {
+              id: m.id,
+              studentId: m.studentId,
+              password: m.password,
+              name: m.name,
+              classYear: m.classYear,
+              generation: m.generation,
+              headline: m.headline,
+              avatarColor: m.avatarColor,
+              snsLinks: m.snsLinks,
+              tags: m.tags,
+              bio: m.bio,
+              projects: m.projects,
+              customContent: m.customContent,
+              avatarImage: m.avatarImage,
+              degreeProcess: m.degreeProcess,
+              academicStatus: m.academicStatus,
+              education: m.education,
+              experience: m.experience,
+              role: m.role
+            }
+          });
+          if (error) throw error;
+        }
       }
 
-      // 2. 덮어쓴 멤버 개별/벌크 update (Supabase는 복수 업데이트가 까다로우므로 비동기 프로미스 올 처리)
+      // 2. 덮어쓴 멤버 개별/벌크 update ➔ RPC 루프 호출로 보안 업데이트
       if (toUpdateList.length > 0) {
-        const updatePromises = toUpdateList.map(m => 
-          supabaseClient
-            .from('members')
-            .update({
+        for (const m of toUpdateList) {
+          const { error } = await supabaseClient.rpc('rpc_update_member_profile', {
+            p_request_id: state.currentUser ? state.currentUser.id : m.id,
+            p_member_id: m.id,
+            p_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+            p_update_data: {
               name: m.name,
               email: m.email || "",
-              class_year: m.classYear,
+              classYear: m.classYear,
               generation: m.generation,
-              degree_process: m.degreeProcess,
+              degreeProcess: m.degreeProcess,
               password: m.password,
               headline: m.headline,
-              sns_links: m.snsLinks
-            })
-            .eq('id', m.id)
-        );
-        const results = await Promise.all(updatePromises);
-        const failedUpdate = results.find(res => res.error);
-        if (failedUpdate) throw failedUpdate.error;
+              snsLinks: m.snsLinks || []
+            }
+          });
+          if (error) throw error;
+        }
       }
     } catch (err) {
       console.error("Supabase 일괄 싱크 오류:", err);
@@ -4670,10 +4679,16 @@ async function handleChangePasswordSubmit(e) {
   if (supabaseClient) {
     try {
       const { error } = await supabaseClient
-        .from('members')
-        .update({ password: hashedNewPw })
-        .eq('id', state.currentUser.id);
+        .rpc('rpc_change_member_password', {
+          p_member_id: state.currentUser.id,
+          p_current_password_hash: state.currentUser.passwordHash || "",
+          p_new_password_hash: hashedNewPw
+        });
       if (error) throw error;
+      
+      // 세션 정보 캐시도 새 암호 해시로 업데이트
+      state.currentUser.passwordHash = hashedNewPw;
+      sessionStorage.setItem('sogang_unity_session', JSON.stringify(state.currentUser));
     } catch (err) {
       console.error("Supabase 비밀번호 변경 서버 동기화 실패:", err);
     }
@@ -4710,9 +4725,12 @@ async function resetMemberPassword(memberId, memberName) {
   if (supabaseClient) {
     try {
       const { error } = await supabaseClient
-        .from('members')
-        .update({ password: hashedResetPw })
-        .eq('id', memberId);
+        .rpc('rpc_reset_member_password', {
+          p_admin_id: state.currentUser ? state.currentUser.id : "",
+          p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_target_member_id: memberId,
+          p_reset_password_hash: hashedResetPw
+        });
       if (error) throw error;
       alert(`[${memberName}] 원우의 비밀번호가 기본 비밀번호 [${resetPw}] (으)로 성공적으로 초기화되었습니다.`);
     } catch (err) {
