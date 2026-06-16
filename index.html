@@ -665,6 +665,11 @@
               <input type="password" id="signupPasswordConfirm" required minlength="4" placeholder="비밀번호 재입력" autocomplete="new-password">
             </div>
           </div>
+          <div class="form-group" style="margin-top: -0.5rem; margin-bottom: 0.8rem;">
+            <span style="font-size: 0.72rem; color: var(--color-text-dim); line-height: 1.4; display: block;">
+              <i class="fa-solid fa-lock text-gold"></i> 입력하신 비밀번호는 단방향 SHA-256 해시값으로 즉시 변환되어 데이터베이스에 안전하게 보관됩니다. 어드민을 포함해 그 누구도 비밀번호 평문을 조회할 수 없으므로 안전합니다.
+            </span>
+          </div>
 
           <div class="form-row split-2">
             <div class="form-group">
@@ -723,6 +728,11 @@
               <label for="addGeneration">기수 (숫자)</label>
               <input type="number" id="addGeneration" placeholder="예: 9" min="1" max="100">
             </div>
+          </div>
+          <div class="form-group" style="margin-top: -0.5rem; margin-bottom: 0.8rem;">
+            <span style="font-size: 0.72rem; color: var(--color-text-dim); line-height: 1.4; display: block;">
+              <i class="fa-solid fa-shield-halved text-gold"></i> 등록 시 비밀번호는 SHA-256 단방향 암호화 처리를 거쳐 데이터베이스에 저장되며, 평문 데이터는 노출되지 않습니다.
+            </span>
           </div>
 
           <div class="form-row split-2">

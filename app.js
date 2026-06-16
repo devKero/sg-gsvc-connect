@@ -878,10 +878,9 @@ function setupEventListeners() {
   }
   const signupModal = document.getElementById('signupModal');
   if (signupModal) {
+    // 입력 도중 실수로 꺼지는 현상 방지를 위해 바깥 클릭 비활성화
     signupModal.addEventListener('click', (e) => {
-      if (e.target.id === 'signupModal') {
-        closeSignupModal();
-      }
+      // closeSignupModal();
     });
   }
   const signupForm = document.getElementById('signupForm');
@@ -994,9 +993,13 @@ function setupEventListeners() {
   // 모달 닫기 버튼
   document.getElementById('closeModalBtn').addEventListener('click', closeProfileModal);
   
-  // 모달 외부 영역 클릭 시 닫기
+  // 모달 외부 영역 클릭 시 닫기 (단, 프로필 편집 중일 때는 실수로 닫히지 않도록 차단)
   document.getElementById('profileModal').addEventListener('click', (e) => {
     if (e.target.id === 'profileModal') {
+      const editModeEl = document.getElementById('modalEditMode');
+      if (editModeEl && !editModeEl.classList.contains('hidden')) {
+        return; // 편집 진행 중이면 닫기 무시
+      }
       closeProfileModal();
     }
   });
@@ -1026,9 +1029,8 @@ function setupEventListeners() {
   document.getElementById('closeAddModalBtn').addEventListener('click', closeAddMemberModal);
   document.getElementById('cancelAddBtn').addEventListener('click', closeAddMemberModal);
   document.getElementById('memberAddModal').addEventListener('click', (e) => {
-    if (e.target.id === 'memberAddModal') {
-      closeAddMemberModal();
-    }
+    // 입력 도중 실수로 꺼지는 현상 방지를 위해 바깥 클릭 비활성화
+    // closeAddMemberModal();
   });
   document.getElementById('memberAddForm').addEventListener('submit', handleAddMemberSubmit);
 
@@ -1044,9 +1046,8 @@ function setupEventListeners() {
   const adminInqModal = document.getElementById('adminInquiryModal');
   if (adminInqModal) {
     adminInqModal.addEventListener('click', (e) => {
-      if (e.target.id === 'adminInquiryModal') {
-        closeAdminInquiryModal();
-      }
+      // 답변 입력 중 실수로 꺼지는 현상 방지를 위해 바깥 클릭 비활성화
+      // closeAdminInquiryModal();
     });
   }
   const adminReplyForm = document.getElementById('adminReplyForm');
@@ -1146,10 +1147,9 @@ function setupEventListeners() {
 
   const excelModal = document.getElementById('excelUploadModal');
   if (excelModal) {
+    // 엑셀 작업 및 매핑 도중 실수로 꺼지는 현상 방지를 위해 바깥 클릭 비활성화
     excelModal.addEventListener('click', (e) => {
-      if (e.target.id === 'excelUploadModal') {
-        closeExcelUploadModal();
-      }
+      // closeExcelUploadModal();
     });
   }
 
@@ -1344,8 +1344,9 @@ function setupEventListeners() {
   }
   const inquiryModal = document.getElementById('inquiryModal');
   if (inquiryModal) {
+    // 문의 작성 도중 실수로 꺼지는 현상 방지를 위해 바깥 클릭 비활성화
     inquiryModal.addEventListener('click', (e) => {
-      if (e.target.id === 'inquiryModal') closeInquiryModal();
+      // closeInquiryModal();
     });
   }
   const tabInquiryWrite = document.getElementById('tabInquiryWrite');
@@ -1376,8 +1377,9 @@ function setupEventListeners() {
   }
   const changePwModal = document.getElementById('changePwModal');
   if (changePwModal) {
+    // 비밀번호 입력 도중 실수로 꺼지는 현상 방지를 위해 바깥 클릭 비활성화
     changePwModal.addEventListener('click', (e) => {
-      if (e.target.id === 'changePwModal') closeChangePwModal();
+      // closeChangePwModal();
     });
   }
   const changePwForm = document.getElementById('changePwForm');
