@@ -462,7 +462,7 @@ async function syncWithSupabase() {
       return {
         id: m.id,
         studentId: m.student_id,
-        phoneLast4: m.phone_last4,
+        password: m.password,
         name: m.name,
         email: email,
         classYear: m.class_year,
@@ -815,13 +815,13 @@ function checkSession() {
     const remembered = localStorage.getItem('sogang_gsvc_remember');
     if (remembered) {
       try {
-        const { studentId, phoneLast4 } = JSON.parse(remembered);
+        const { studentId, password } = JSON.parse(remembered);
         const studentIdEl = document.getElementById('studentId');
-        const phoneLast4El = document.getElementById('phoneLast4');
+        const passwordEl = document.getElementById('loginPassword');
         const rememberMeEl = document.getElementById('rememberMe');
         
         if (studentIdEl) studentIdEl.value = studentId;
-        if (phoneLast4El) phoneLast4El.value = phoneLast4;
+        if (passwordEl) passwordEl.value = password;
         if (rememberMeEl) rememberMeEl.checked = true;
       } catch (e) {
         console.error("저장된 로그인 정보 복원 실패:", e);
@@ -1655,7 +1655,7 @@ async function handleSignupSubmit(e) {
   const newMember = {
     id: `member_${Date.now()}`,
     studentId,
-    phoneLast4: password,
+    password: password,
     name,
     email,
     classYear,
@@ -1682,7 +1682,7 @@ async function handleSignupSubmit(e) {
         .insert([{
           id: newMember.id,
           student_id: newMember.studentId,
-          phone_last4: newMember.phoneLast4,
+          password: newMember.password,
           name: newMember.name,
           email: newMember.email,
           class_year: newMember.classYear,
@@ -1815,11 +1815,11 @@ function closePrivacyModal() {
 async function handleLogin(e) {
   e.preventDefault();
   const studentId = document.getElementById('studentId').value.trim();
-  const phoneLast4 = document.getElementById('phoneLast4').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
   const errorEl = document.getElementById('loginError');
 
   // 1. 입력된 패스워드 해싱
-  const hashedInput = await hashPassword(phoneLast4);
+  const hashedInput = await hashPassword(password);
 
   // 2. 대소문자 무관 학번 비교
   const matchedMember = state.members.find(m => 
@@ -1830,13 +1830,13 @@ async function handleLogin(e) {
   let needMigration = false;
 
   if (matchedMember) {
-    const dbPassword = (matchedMember.phoneLast4 || "").trim();
+    const dbPassword = (matchedMember.password || "").trim();
     if (dbPassword.length === 64) {
       // 해시값 대조
       isPasswordCorrect = (dbPassword === hashedInput);
     } else {
       // 기존 평문 대조 폴백
-      isPasswordCorrect = (dbPassword === phoneLast4);
+      isPasswordCorrect = (dbPassword === password);
       if (isPasswordCorrect) {
         needMigration = true; // 최초 로그인 성공 시 자동 마이그레이션 대상 지정
       }
@@ -1858,14 +1858,14 @@ async function handleLogin(e) {
     
     // 자동 마이그레이션 (비밀번호 해싱)
     if (needMigration) {
-      matchedMember.phoneLast4 = hashedInput;
+      matchedMember.password = hashedInput;
       // 로컬 스토리지 업데이트
       localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
       // Supabase 업데이트
       if (supabaseClient !== null) {
         supabaseClient
           .from('members')
-          .update({ phone_last4: hashedInput })
+          .update({ password: hashedInput })
           .eq('id', matchedMember.id)
           .then(({ error }) => {
             if (error) {
@@ -1880,7 +1880,7 @@ async function handleLogin(e) {
     // 로그인 정보 저장/삭제 처리
     const rememberMe = document.getElementById('rememberMe').checked;
     if (rememberMe) {
-      localStorage.setItem('sogang_gsvc_remember', JSON.stringify({ studentId, phoneLast4 }));
+      localStorage.setItem('sogang_gsvc_remember', JSON.stringify({ studentId, password }));
     } else {
       localStorage.removeItem('sogang_gsvc_remember');
     }
@@ -3190,7 +3190,7 @@ async function handleAddMemberSubmit(e) {
   e.preventDefault();
   
   const studentId = document.getElementById('addStudentId').value.trim();
-  const phoneLast4 = document.getElementById('addPhoneLast4').value.trim();
+  const password = document.getElementById('addPassword').value.trim();
   const name = document.getElementById('addName').value.trim();
   const generationVal = document.getElementById('addGeneration').value.trim();
   const classYear = document.getElementById('addClassYear').value.trim();
@@ -3227,13 +3227,13 @@ async function handleAddMemberSubmit(e) {
   const academicStatus = "";
 
   // 비밀번호 해싱 처리
-  const hashedPassword = await hashPassword(phoneLast4);
+  const hashedPassword = await hashPassword(password);
 
   // 2. 신규 멤버 객체 빌드
   const newMember = {
     id: `member_${Date.now()}`,
     studentId,
-    phoneLast4: hashedPassword,
+    password: hashedPassword,
     name,
     email,
     classYear,
@@ -3276,7 +3276,7 @@ async function handleAddMemberSubmit(e) {
         .insert([{
           id: newMember.id,
           student_id: newMember.studentId,
-          phone_last4: newMember.phoneLast4,
+          password: newMember.password,
           name: newMember.name,
           class_year: newMember.classYear,
           generation: newMember.generation,
@@ -3852,7 +3852,7 @@ function handleExcelFileSelected(e) {
           generation: rowData[2] ? parseInt(rowData[2]) : null,
           classYear: String(rowData[3] || "").trim(),
           degreeProcess: String(rowData[4] || "").trim(),
-          phoneLast4: String(rowData[5] || "").trim(),
+          password: String(rowData[5] || "").trim(),
           headline: "서강대 가상융합전문대학원 원우", // 한줄소개 제거에 따른 기본값
           email: "" // 이메일 제거에 따른 기본값
         });
@@ -3917,7 +3917,7 @@ function handleExcelParsedData(rows) {
       <td>${row.generation ? `${row.generation}기` : "-"}</td>
       <td>${escapeHtml(row.classYear)}</td>
       <td>${escapeHtml(row.degreeProcess)}</td>
-      <td style="font-family: monospace;">${row.phoneLast4 ? "****" : ""}</td>
+      <td style="font-family: monospace;">${row.password ? "****" : ""}</td>
       <td>${statusHtml}</td>
     `;
 
@@ -4017,13 +4017,13 @@ async function submitExcelData() {
     const row = state.excelParsedData[i];
     
     // 필수 필드 결여 가드
-    if (!row.studentId || !row.name || !row.phoneLast4) {
+    if (!row.studentId || !row.name || !row.password) {
       skippedMembersCount++;
       continue;
     }
 
-    const rawPhoneLast4 = String(row.phoneLast4).trim();
-    const hashedPassword = await hashPassword(rawPhoneLast4);
+    const rawPassword = String(row.password).trim();
+    const hashedPassword = await hashPassword(rawPassword);
 
     const matchedIdx = state.members.findIndex(m => m.studentId.toLowerCase() === row.studentId.toLowerCase());
     const isDuplicate = matchedIdx !== -1;
@@ -4036,7 +4036,7 @@ async function submitExcelData() {
         targetMember.generation = row.generation;
         targetMember.classYear = row.classYear;
         targetMember.degreeProcess = row.degreeProcess;
-        targetMember.phoneLast4 = hashedPassword;
+        targetMember.password = hashedPassword;
         
         // 입력 칸이 비어있지 않으면 추가 정보도 병합
         if (row.headline) targetMember.headline = row.headline;
@@ -4057,7 +4057,7 @@ async function submitExcelData() {
       const newMember = {
         id: `member_${Date.now()}_${i}`,
         studentId: row.studentId,
-        phoneLast4: hashedPassword,
+        password: hashedPassword,
         name: row.name,
         email: row.email || "",
         classYear: row.classYear,
@@ -4097,7 +4097,7 @@ async function submitExcelData() {
           .insert(toInsertList.map(m => ({
             id: m.id,
             student_id: m.studentId,
-            phone_last4: m.phoneLast4,
+            password: m.password,
             name: m.name,
             email: m.email || "",
             class_year: m.classYear,
@@ -4130,7 +4130,7 @@ async function submitExcelData() {
               class_year: m.classYear,
               generation: m.generation,
               degree_process: m.degreeProcess,
-              phone_last4: m.phoneLast4,
+              password: m.password,
               headline: m.headline,
               sns_links: m.snsLinks
             })
@@ -4647,7 +4647,7 @@ async function handleChangePasswordSubmit(e) {
     return;
   }
 
-  const dbPassword = (myMember.phoneLast4 || "").trim();
+  const dbPassword = (myMember.password || "").trim();
   let isCurrentPwCorrect = false;
 
   if (dbPassword.length === 64) {
@@ -4664,14 +4664,14 @@ async function handleChangePasswordSubmit(e) {
 
   // 4. 비밀번호 업데이트 진행
   const hashedNewPw = await hashPassword(newPw);
-  myMember.phoneLast4 = hashedNewPw;
+  myMember.password = hashedNewPw;
   localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
 
   if (supabaseClient) {
     try {
       const { error } = await supabaseClient
         .from('members')
-        .update({ phone_last4: hashedNewPw })
+        .update({ password: hashedNewPw })
         .eq('id', state.currentUser.id);
       if (error) throw error;
     } catch (err) {
@@ -4702,7 +4702,7 @@ async function resetMemberPassword(memberId, memberName) {
   // 로컬 상태 변경
   const targetMember = state.members.find(m => m.id === memberId);
   if (targetMember) {
-    targetMember.phoneLast4 = hashedResetPw;
+    targetMember.password = hashedResetPw;
     localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
   }
 
@@ -4711,7 +4711,7 @@ async function resetMemberPassword(memberId, memberName) {
     try {
       const { error } = await supabaseClient
         .from('members')
-        .update({ phone_last4: hashedResetPw })
+        .update({ password: hashedResetPw })
         .eq('id', memberId);
       if (error) throw error;
       alert(`[${memberName}] 원우의 비밀번호가 기본 비밀번호 [${resetPw}] (으)로 성공적으로 초기화되었습니다.`);
