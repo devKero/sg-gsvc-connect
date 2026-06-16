@@ -12,6 +12,17 @@ if (SUPABASE_URL && !SUPABASE_URL.includes("your-project-id") && typeof supabase
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 }
 
+// ==================== 비밀번호 SHA-256 해시 함수 ====================
+async function hashPassword(password) {
+  if (!password) return "";
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
 // ==================== 상태 관리 (State) ====================
 let state = {
   theme: 'light',          // 다크모드 테마 상태
