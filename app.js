@@ -414,6 +414,53 @@ function initLocalStorage() {
   }
 }
 
+// Supabase 문의사항 데이터 동기화
+async function syncInquiries() {
+  if (!supabaseClient) return;
+  if (!state.currentUser || state.currentUser.isGuest) {
+    state.inquiries = [];
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify([]));
+    return;
+  }
+  try {
+    let data = [];
+    let error = null;
+    if (state.isAdmin) {
+      const res = await supabaseClient.rpc('rpc_get_all_inquiries_admin', {
+        p_admin_id: state.currentUser.id,
+        p_admin_password_hash: state.currentUser.passwordHash || ""
+      });
+      data = res.data;
+      error = res.error;
+    } else {
+      const res = await supabaseClient.rpc('rpc_get_my_inquiries', {
+        p_user_id: state.currentUser.id,
+        p_password_hash: state.currentUser.passwordHash || "",
+        p_student_id: state.currentUser.studentId || ""
+      });
+      data = res.data;
+      error = res.error;
+    }
+    if (error) throw error;
+    
+    state.inquiries = (data || []).map(i => ({
+      id: i.id,
+      studentId: i.student_id,
+      author: i.author,
+      title: i.title || "",
+      message: i.message,
+      reply: i.reply || "",
+      repliedBy: i.replied_by || "",
+      status: i.status || "pending",
+      createdAt: i.created_at,
+      deletedAt: i.deleted_at
+    }));
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+  } catch (err) {
+    console.error("inquiries 동기화 실패:", err);
+  }
+}
+
 // Supabase 클라우드 데이터베이스와 양방향 동기화
 async function syncWithSupabase() {
   if (!supabaseClient) {
@@ -439,17 +486,7 @@ async function syncWithSupabase() {
     if (gError) throw gError;
 
     // 3. inquiries 테이블 데이터 조회 (방어막 장착)
-    let dbInquiries = [];
-    try {
-      const { data, error } = await supabaseClient
-        .from('inquiries')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      dbInquiries = data || [];
-    } catch (err) {
-      console.warn("inquiries 테이블 로드 실패 (아직 생성되지 않았거나 마이그레이션 전 단계일 수 있습니다):", err);
-    }
+    // RLS 대응 syncInquiries() 함수로 동기화 위임
 
     // 3. majors 테이블 데이터 조회 제거됨
 
@@ -508,20 +545,8 @@ async function syncWithSupabase() {
     }));
     localStorage.setItem('sogang_unity_guestbook', JSON.stringify(state.guestbook));
 
-    // 문의사항 데이터 갱신
-    state.inquiries = dbInquiries.map(i => ({
-      id: i.id,
-      studentId: i.student_id,
-      author: i.author,
-      title: i.title || "",
-      message: i.message,
-      reply: i.reply || "",
-      repliedBy: i.replied_by || "", // 답변한 운영진 기록 필드 연동
-      status: i.status || "pending",
-      createdAt: i.created_at,
-      deletedAt: i.deleted_at
-    }));
-    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+    // 문의사항 데이터 갱신 위임 호출
+    await syncInquiries();
 
     // 4. quick_links 테이블 데이터 조회
     let dbQuickLinks = [];
@@ -587,60 +612,48 @@ async function autoPurgeTrash() {
 
   const purgeCutoff = new Date();
   purgeCutoff.setDate(purgeCutoff.getDate() - 30);
+  const cutoffStr = purgeCutoff.toISOString();
 
-  // 1. 회원 정보 삭제
-  const deletedMembersToPurge = state.members.filter(m => {
-    if (m.role !== 'deleted') return false;
-    const deletedTime = m.deletedAt ? new Date(m.deletedAt) : (m.createdAt ? new Date(m.createdAt) : null);
-    return deletedTime && deletedTime < purgeCutoff;
-  });
+  try {
+    // 1. Supabase 백엔드에서 30일 경과 회원 및 문의사항 일괄 파기 (RPC 호출)
+    const { error } = await supabaseClient.rpc('rpc_purge_deleted_items', {
+      p_admin_id: state.currentUser ? state.currentUser.id : "",
+      p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+      p_cutoff_time: cutoffStr
+    });
+    if (error) throw error;
+    
+    console.log(`[Auto-Purge] 30일이 지난 휴지통 항목 정리 완료 (기준일: ${cutoffStr.substring(0, 10)})`);
 
-  let membersChanged = false;
-  for (const m of deletedMembersToPurge) {
-    console.log(`[Auto-Purge] 멤버 영구 삭제 진행: ${m.name} (${m.id})`);
-    try {
-      const { error } = await supabaseClient.from('members').delete().eq('id', m.id);
-      if (!error) {
-        state.members = state.members.filter(mem => mem.id !== m.id);
-        membersChanged = true;
-      }
-    } catch (err) {
-      console.error(`[Auto-Purge] 멤버 ${m.id} 삭제 실패:`, err);
+    // 2. 로컬 메모리 및 캐시 갱신
+    const initialMembersLen = state.members.length;
+    state.members = state.members.filter(m => {
+      if (m.role !== 'deleted') return true;
+      const deletedTime = m.deletedAt ? new Date(m.deletedAt) : (m.createdAt ? new Date(m.createdAt) : null);
+      return !deletedTime || deletedTime >= purgeCutoff;
+    });
+
+    const initialInquiriesLen = state.inquiries.length;
+    state.inquiries = state.inquiries.filter(i => {
+      if (i.status !== 'deleted') return true;
+      const deletedTime = i.deletedAt ? new Date(i.deletedAt) : (i.createdAt ? new Date(i.createdAt) : null);
+      return !deletedTime || deletedTime >= purgeCutoff;
+    });
+
+    if (state.members.length !== initialMembersLen) {
+      localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+      renderFilterSelectorsOptions();
+      renderMembersGrid();
+      renderFilterTags();
+      if (state.isAdmin) renderAdminDashboard();
     }
-  }
 
-  if (membersChanged) {
-    localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
-    renderFilterSelectorsOptions();
-    renderMembersGrid();
-    renderFilterTags();
-    if (state.isAdmin) renderAdminDashboard();
-  }
-
-  // 2. 문의사항 삭제
-  const deletedInqsToPurge = state.inquiries.filter(i => {
-    if (i.status !== 'deleted') return false;
-    const deletedTime = i.deletedAt ? new Date(i.deletedAt) : (i.createdAt ? new Date(i.createdAt) : null);
-    return deletedTime && deletedTime < purgeCutoff;
-  });
-
-  let inquiriesChanged = false;
-  for (const inq of deletedInqsToPurge) {
-    console.log(`[Auto-Purge] 문의사항 영구 삭제 진행: ${inq.title} (${inq.id})`);
-    try {
-      const { error } = await supabaseClient.from('inquiries').delete().eq('id', inq.id);
-      if (!error) {
-        state.inquiries = state.inquiries.filter(i => i.id !== inq.id);
-        inquiriesChanged = true;
-      }
-    } catch (err) {
-      console.error(`[Auto-Purge] 문의사항 ${inq.id} 삭제 실패:`, err);
+    if (state.inquiries.length !== initialInquiriesLen) {
+      localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+      if (state.isAdmin) renderAdminInquiries();
     }
-  }
-
-  if (inquiriesChanged) {
-    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
-    if (state.isAdmin) renderAdminInquiries();
+  } catch (err) {
+    console.error("[Auto-Purge] 휴지통 자동 정리 실패:", err);
   }
 
   // 3. 90일 경과한 쪽지(DM) 삭제
@@ -648,10 +661,11 @@ async function autoPurgeTrash() {
   dmCutoff.setDate(dmCutoff.getDate() - 90);
 
   try {
-    const { error: dmError } = await supabaseClient
-      .from('messages')
-      .delete()
-      .lt('created_at', dmCutoff.toISOString());
+    const { error: dmError } = await supabaseClient.rpc('rpc_purge_old_messages', {
+      p_admin_id: state.currentUser ? state.currentUser.id : "",
+      p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+      p_cutoff_time: dmCutoff.toISOString()
+    });
     if (dmError) throw dmError;
     console.log(`[Auto-Purge] 90일 경과한 오래된 쪽지 삭제 정리 완료 (기준일: ${dmCutoff.toISOString().substring(0, 10)})`);
   } catch (err) {
@@ -818,6 +832,7 @@ function checkSession() {
       state.selectedGeneration = userMember && userMember.generation ? String(userMember.generation) : "";
     }
     
+    await syncInquiries();
     enterDashboard();
   } else {
     showLoginGate();
@@ -1690,30 +1705,29 @@ async function handleSignupSubmit(e) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('members')
-        .insert([{
+      const { error } = await supabaseClient.rpc('rpc_request_signup', {
+        p_new_member: {
           id: newMember.id,
-          student_id: newMember.studentId,
+          studentId: newMember.studentId,
           password: newMember.password,
           name: newMember.name,
           email: newMember.email,
-          class_year: newMember.classYear,
+          classYear: newMember.classYear,
           generation: newMember.generation,
           headline: newMember.headline,
-          avatar_color: newMember.avatarColor,
-          sns_links: newMember.snsLinks,
+          avatarColor: newMember.avatarColor,
+          snsLinks: newMember.snsLinks,
           tags: newMember.tags,
           bio: newMember.bio,
           projects: newMember.projects,
-          custom_content: newMember.customContent,
-          avatar_image: newMember.avatarImage,
-          degree_process: newMember.degreeProcess,
-          academic_status: newMember.academicStatus,
+          customContent: newMember.customContent,
+          avatarImage: newMember.avatarImage,
+          degreeProcess: newMember.degreeProcess,
+          academicStatus: newMember.academicStatus,
           education: newMember.education,
-          experience: newMember.experience,
-          role: newMember.role
-        }]);
+          experience: newMember.experience
+        }
+      });
 
       if (error) throw error;
     } catch (err) {
@@ -1877,9 +1891,11 @@ async function handleLogin(e) {
       // Supabase 업데이트
       if (supabaseClient !== null) {
         supabaseClient
-          .from('members')
-          .update({ password: hashedInput })
-          .eq('id', matchedMember.id)
+          .rpc('rpc_migrate_member_password', {
+            p_member_id: matchedMember.id,
+            p_plain_password: password,
+            p_new_password_hash: hashedInput
+          })
           .then(({ error }) => {
             if (error) {
               console.error("비밀번호 해싱 마이그레이션 실패:", error);
@@ -1906,7 +1922,8 @@ async function handleLogin(e) {
       classYear: matchedMember.classYear,
       isGuest: false,
       generation: matchedMember.generation || null,
-      passwordHash: hashedInput
+      passwordHash: hashedInput,
+      studentId: matchedMember.studentId
     };
     
     sessionStorage.setItem('sogang_unity_session', JSON.stringify(state.currentUser));
@@ -1918,6 +1935,7 @@ async function handleLogin(e) {
       state.selectedGeneration = matchedMember.generation ? String(matchedMember.generation) : "";
     }
 
+    await syncInquiries();
     enterDashboard();
   } else {
     errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> 학번 또는 비밀번호가 일치하지 않습니다.`;
@@ -2466,10 +2484,12 @@ async function toggleAdminRole(memberId, makeAdmin) {
   const isSupabaseActive = supabaseClient !== null;
   if (isSupabaseActive) {
     try {
-      const { error } = await supabaseClient
-        .from('members')
-        .update({ role: nextRole })
-        .eq('id', memberId);
+      const { error } = await supabaseClient.rpc('rpc_update_member_role', {
+        p_admin_id: state.currentUser ? state.currentUser.id : "",
+        p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+        p_target_member_id: memberId,
+        p_new_role: nextRole
+      });
 
       if (error) throw error;
     } catch (err) {
@@ -3347,25 +3367,15 @@ async function handleApproveMember(memberId, name) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('members')
-        .update({
-          role: "member",
-          headline: member.headline,
-          deleted_at: null
-        })
-        .eq('id', memberId);
-
-      if (error) {
-        const { error: retryError } = await supabaseClient
-          .from('members')
-          .update({
-            role: "member",
-            headline: member.headline
-          })
-          .eq('id', memberId);
-        if (retryError) throw retryError;
-      }
+      const { error } = await supabaseClient.rpc('rpc_update_member_status_admin', {
+        p_admin_id: state.currentUser ? state.currentUser.id : "",
+        p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+        p_target_member_id: memberId,
+        p_new_role: "member",
+        p_new_headline: member.headline,
+        p_deleted_at: null
+      });
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase 가입 승인 에러:", err);
       alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
@@ -3394,18 +3404,15 @@ async function handleRejectSignup(memberId, name) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('members')
-        .update({ role: "deleted", deleted_at: nowIso })
-        .eq('id', memberId);
-
-      if (error) {
-        const { error: retryError } = await supabaseClient
-          .from('members')
-          .update({ role: "deleted" })
-          .eq('id', memberId);
-        if (retryError) throw retryError;
-      }
+      const { error } = await supabaseClient.rpc('rpc_update_member_status_admin', {
+        p_admin_id: state.currentUser ? state.currentUser.id : "",
+        p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+        p_target_member_id: memberId,
+        p_new_role: "deleted",
+        p_new_headline: null,
+        p_deleted_at: nowIso
+      });
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase 가입 반려 에러:", err);
       alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
@@ -3431,18 +3438,15 @@ async function handleDeleteMember(memberId, name) {
     const isSupabaseActive = supabaseClient !== null;
     if (isSupabaseActive) {
       try {
-        const { error } = await supabaseClient
-          .from('members')
-          .update({ role: 'deleted', deleted_at: nowIso })
-          .eq('id', memberId);
-
-        if (error) {
-          const { error: retryError } = await supabaseClient
-            .from('members')
-            .update({ role: 'deleted' })
-            .eq('id', memberId);
-          if (retryError) throw retryError;
-        }
+        const { error } = await supabaseClient.rpc('rpc_update_member_status_admin', {
+          p_admin_id: state.currentUser ? state.currentUser.id : "",
+          p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_target_member_id: memberId,
+          p_new_role: "deleted",
+          p_new_headline: null,
+          p_deleted_at: nowIso
+        });
+        if (error) throw error;
       } catch (err) {
         console.error("Supabase 멤버 휴지통 이동 에러:", err);
         alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
@@ -3472,18 +3476,15 @@ async function handleRestoreMember(memberId, name) {
     const isSupabaseActive = supabaseClient !== null;
     if (isSupabaseActive) {
       try {
-        const { error } = await supabaseClient
-          .from('members')
-          .update({ role: 'member', deleted_at: null })
-          .eq('id', memberId);
-
-        if (error) {
-          const { error: retryError } = await supabaseClient
-            .from('members')
-            .update({ role: 'member' })
-            .eq('id', memberId);
-          if (retryError) throw retryError;
-        }
+        const { error } = await supabaseClient.rpc('rpc_update_member_status_admin', {
+          p_admin_id: state.currentUser ? state.currentUser.id : "",
+          p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_target_member_id: memberId,
+          p_new_role: "member",
+          p_new_headline: null,
+          p_deleted_at: null
+        });
+        if (error) throw error;
       } catch (err) {
         console.error("Supabase 멤버 복구 에러:", err);
         alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 반영됩니다)");
@@ -3509,10 +3510,11 @@ async function handleDeleteMemberPermanent(memberId, name) {
     const isSupabaseActive = supabaseClient !== null;
     if (isSupabaseActive) {
       try {
-        const { error } = await supabaseClient
-          .from('members')
-          .delete()
-          .eq('id', memberId);
+        const { error } = await supabaseClient.rpc('rpc_delete_member_permanent_admin', {
+          p_admin_id: state.currentUser ? state.currentUser.id : "",
+          p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_target_member_id: memberId
+        });
 
         if (error) throw error;
       } catch (err) {
@@ -3637,18 +3639,21 @@ async function handleModalCommentSubmit(e) {
   const isSupabaseActive = supabaseClient !== null;
   if (isSupabaseActive) {
     try {
-      const { data, error } = await supabaseClient
-        .from('guestbook')
-        .insert([{
-          target_member_id: targetMemberId,
+      const authorId = (state.currentUser && !state.currentUser.isGuest) ? state.currentUser.id : 'guest';
+      const passwordHash = (state.currentUser && !state.currentUser.isGuest) ? state.currentUser.passwordHash : null;
+      
+      const { error } = await supabaseClient.rpc('rpc_insert_guestbook', {
+        p_author_id: authorId,
+        p_password_hash: passwordHash,
+        p_guestbook_data: {
+          targetMemberId,
           author,
           message,
           tag,
-          is_private: isPrivate,
-          timestamp,
-          likes: 0
-        }])
-        .select();
+          isPrivate,
+          timestamp
+        }
+      });
 
       if (error) throw error;
       
@@ -3705,10 +3710,9 @@ async function likePersonalComment(id, memberId) {
     const isSupabaseActive = supabaseClient !== null;
     if (isSupabaseActive) {
       try {
-        const { error } = await supabaseClient
-          .from('guestbook')
-          .update({ likes: state.guestbook[idx].likes })
-          .eq('id', id);
+        const { error } = await supabaseClient.rpc('rpc_like_guestbook', {
+          p_comment_id: id
+        });
 
         if (error) throw error;
       } catch (err) {
@@ -3729,10 +3733,14 @@ async function deletePersonalComment(id, memberId) {
     const isSupabaseActive = supabaseClient !== null;
     if (isSupabaseActive) {
       try {
-        const { error } = await supabaseClient
-          .from('guestbook')
-          .delete()
-          .eq('id', id);
+        const requestId = state.currentUser ? state.currentUser.id : 'guest';
+        const passwordHash = state.currentUser ? state.currentUser.passwordHash : null;
+
+        const { error } = await supabaseClient.rpc('rpc_delete_guestbook', {
+          p_request_id: requestId,
+          p_password_hash: passwordHash,
+          p_comment_id: id
+        });
 
         if (error) throw error;
       } catch (err) {
@@ -4497,16 +4505,14 @@ async function handleInquirySubmit(e) {
   // Supabase 동기화
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('inquiries')
-        .insert([{
-          student_id: studentId,
-          author,
-          title,
-          message,
-          reply: "",
-          status: "pending"
-        }]);
+      const { error } = await supabaseClient.rpc('rpc_create_inquiry', {
+        p_user_id: state.currentUser.id,
+        p_password_hash: state.currentUser.passwordHash || "",
+        p_student_id: studentId,
+        p_author: author,
+        p_title: title,
+        p_message: message
+      });
       if (error) throw error;
       await syncWithSupabase();
     } catch (err) {
@@ -4588,20 +4594,14 @@ async function handleUserDeleteInquiry(inquiryId) {
 
     if (supabaseClient) {
       try {
-        // Try with deleted_at column
-        const { error } = await supabaseClient
-          .from('inquiries')
-          .update({ status: 'deleted', deleted_at: nowIso })
-          .eq('id', inquiryId);
-        
-        if (error) {
-          // Fallback retry if deleted_at column is missing
-          const { error: retryError } = await supabaseClient
-            .from('inquiries')
-            .update({ status: 'deleted' })
-            .eq('id', inquiryId);
-          if (retryError) throw retryError;
-        }
+        const { error } = await supabaseClient.rpc('rpc_update_inquiry_status', {
+          p_user_id: state.currentUser ? state.currentUser.id : "",
+          p_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_inquiry_id: inquiryId,
+          p_status: 'deleted',
+          p_deleted_at: nowIso
+        });
+        if (error) throw error;
         alert("문의사항이 정상적으로 삭제되었습니다.");
       } catch (err) {
         console.error("Supabase 문의사항 삭제 에러:", err);
@@ -5023,14 +5023,13 @@ async function submitAdminReply(inquiryId, replyText, repliedBy) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('inquiries')
-        .update({ 
-          reply: replyText, 
-          replied_by: repliedBy, 
-          status: "resolved" 
-        })
-        .eq('id', inquiryId);
+      const { error } = await supabaseClient.rpc('rpc_reply_inquiry_admin', {
+        p_admin_id: state.currentUser.id,
+        p_admin_password_hash: state.currentUser.passwordHash || "",
+        p_inquiry_id: inquiryId,
+        p_reply_text: replyText,
+        p_replied_by: repliedBy
+      });
       if (error) throw error;
       alert("답변이 정상적으로 등록 및 저장되었습니다.");
       await syncWithSupabase();
@@ -5065,18 +5064,14 @@ async function deleteInquiry(inquiryId) {
 
     if (supabaseClient) {
       try {
-        const { error } = await supabaseClient
-          .from('inquiries')
-          .update({ status: 'deleted', deleted_at: nowIso })
-          .eq('id', inquiryId);
-        
-        if (error) {
-          const { error: retryError } = await supabaseClient
-            .from('inquiries')
-            .update({ status: 'deleted' })
-            .eq('id', inquiryId);
-          if (retryError) throw retryError;
-        }
+        const { error } = await supabaseClient.rpc('rpc_update_inquiry_status', {
+          p_user_id: state.currentUser ? state.currentUser.id : "",
+          p_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_inquiry_id: inquiryId,
+          p_status: 'deleted',
+          p_deleted_at: nowIso
+        });
+        if (error) throw error;
         alert("문의 건이 휴지통으로 이동되었습니다.");
         closeAdminInquiryModal();
         await syncWithSupabase();
@@ -5101,14 +5096,16 @@ async function deleteInquiry(inquiryId) {
 
     if (supabaseClient) {
       try {
-        const { error } = await supabaseClient
-          .from('inquiries')
-          .delete()
-          .eq('id', inquiryId);
+        const { error } = await supabaseClient.rpc('rpc_update_inquiry_status', {
+          p_user_id: state.currentUser ? state.currentUser.id : "",
+          p_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_inquiry_id: inquiryId,
+          p_status: 'permanently_deleted'
+        });
         if (error) throw error;
         alert("문의 내역이 완전히 삭제되었습니다.");
         closeAdminInquiryModal();
-        await syncWithSupabase();
+        await syncInquiries();
         renderAdminInquiries();
       } catch (err) {
         console.error("Supabase 문의 영구 삭제 실패:", err);
@@ -5137,20 +5134,16 @@ async function handleRestoreInquiry(inquiryId) {
 
     if (supabaseClient) {
       try {
-        const { error } = await supabaseClient
-          .from('inquiries')
-          .update({ status: newStatus, deleted_at: null })
-          .eq('id', inquiryId);
-        
-        if (error) {
-          const { error: retryError } = await supabaseClient
-            .from('inquiries')
-            .update({ status: newStatus })
-            .eq('id', inquiryId);
-          if (retryError) throw retryError;
-        }
+        const { error } = await supabaseClient.rpc('rpc_update_inquiry_status', {
+          p_user_id: state.currentUser ? state.currentUser.id : "",
+          p_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_inquiry_id: inquiryId,
+          p_status: newStatus,
+          p_deleted_at: null
+        });
+        if (error) throw error;
         alert("문의 건이 복구되었습니다.");
-        await syncWithSupabase();
+        await syncInquiries();
         renderAdminInquiries();
       } catch (err) {
         console.error("Supabase 문의 복구 실패:", err);
@@ -5176,14 +5169,13 @@ async function updateDmUnreadCount() {
   
   if (supabaseClient) {
     try {
-      const { data, error } = await supabaseClient
-        .from('messages')
-        .select('id, is_read, deleted_by_receiver')
-        .eq('receiver_id', state.currentUser.id)
-        .eq('is_read', false);
+      const { data, error } = await supabaseClient.rpc('rpc_get_my_messages', {
+        p_user_id: state.currentUser.id,
+        p_password_hash: state.currentUser.passwordHash || ""
+      });
       if (error) throw error;
-      const activeUnread = (data || []).filter(m => !m.deleted_by_receiver);
-      state.dmUnreadCount = activeUnread.length;
+      const unreadList = (data || []).filter(m => m.receiver_id === state.currentUser.id && !m.is_read && !m.deleted_by_receiver);
+      state.dmUnreadCount = unreadList.length;
     } catch (err) {
       console.warn("Supabase 안 읽은 쪽지 조회 실패 (messages 테이블 미생성 상태일 수 있음):", err);
       const cached = localStorage.getItem('sogang_unity_messages');
@@ -5220,11 +5212,10 @@ async function syncDMs() {
   
   if (supabaseClient) {
     try {
-      const { data, error } = await supabaseClient
-        .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${state.currentUser.id},receiver_id.eq.${state.currentUser.id}`)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabaseClient.rpc('rpc_get_my_messages', {
+        p_user_id: state.currentUser.id,
+        p_password_hash: state.currentUser.passwordHash || ""
+      });
       if (error) throw error;
       
       state.messages = (data || []).map(m => ({
@@ -5265,11 +5256,11 @@ async function markMessagesAsRead() {
   
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('messages')
-        .update({ is_read: true })
-        .eq('receiver_id', state.currentUser.id)
-        .eq('is_read', false);
+      const { error } = await supabaseClient.rpc('rpc_mark_messages_read', {
+        p_user_id: state.currentUser.id,
+        p_password_hash: state.currentUser.passwordHash || "",
+        p_opponent_id: "" // 전체 일괄 읽음 처리
+      });
       if (error) throw error;
     } catch (err) {
       console.error("Supabase DMs 읽음 업데이트 실패:", err);
@@ -5552,12 +5543,11 @@ async function markMessagesAsReadForOpponent(opponentId) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('messages')
-        .update({ is_read: true })
-        .eq('sender_id', opponentId)
-        .eq('receiver_id', state.currentUser.id)
-        .eq('is_read', false);
+      const { error } = await supabaseClient.rpc('rpc_mark_messages_read', {
+        p_user_id: state.currentUser.id,
+        p_password_hash: state.currentUser.passwordHash || "",
+        p_opponent_id: opponentId
+      });
       if (error) throw error;
     } catch (err) {
       console.error(`Supabase DMs 읽음 업데이트 실패 (상대방: ${opponentId}):`, err);
@@ -5611,16 +5601,14 @@ async function handleSendDmReply() {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('messages')
-        .insert([{
-          sender_id: newMsg.senderId,
-          receiver_id: newMsg.receiverId,
-          sender_name: newMsg.senderName,
-          receiver_name: newMsg.receiverName,
-          message: newMsg.message,
-          is_read: false
-        }]);
+      const { error } = await supabaseClient.rpc('rpc_send_message', {
+        p_sender_id: newMsg.senderId,
+        p_sender_password_hash: state.currentUser.passwordHash || "",
+        p_receiver_id: newMsg.receiverId,
+        p_sender_name: newMsg.senderName,
+        p_receiver_name: newMsg.receiverName,
+        p_message: newMsg.message
+      });
       if (error) throw error;
       await syncDMs();
       renderDmInbox();
@@ -5674,10 +5662,11 @@ async function handleDeleteDm(messageId) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('messages')
-        .update({ message: "삭제된 쪽지입니다." })
-        .eq('id', messageId);
+      const { error } = await supabaseClient.rpc('rpc_delete_message_tombstone', {
+        p_user_id: state.currentUser.id,
+        p_password_hash: state.currentUser.passwordHash || "",
+        p_message_id: messageId
+      });
       if (error) throw error;
       
       await syncDMs();
@@ -5830,16 +5819,14 @@ async function handleSendDmSubmit(e) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('messages')
-        .insert([{
-          sender_id: newMsg.senderId,
-          receiver_id: newMsg.receiverId,
-          sender_name: newMsg.senderName,
-          receiver_name: newMsg.receiverName,
-          message: newMsg.message,
-          is_read: false
-        }]);
+      const { error } = await supabaseClient.rpc('rpc_send_message', {
+        p_sender_id: newMsg.senderId,
+        p_sender_password_hash: state.currentUser.passwordHash || "",
+        p_receiver_id: newMsg.receiverId,
+        p_sender_name: newMsg.senderName,
+        p_receiver_name: newMsg.receiverName,
+        p_message: newMsg.message
+      });
       if (error) throw error;
       alert("쪽지가 정상적으로 전송되었습니다.");
     } catch (err) {
