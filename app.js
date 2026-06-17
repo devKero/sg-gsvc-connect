@@ -832,7 +832,11 @@ function checkSession() {
       state.selectedGeneration = userMember && userMember.generation ? String(userMember.generation) : "";
     }
     
-    await syncInquiries();
+    try {
+      await syncInquiries();
+    } catch (err) {
+      console.warn("로그인 후 문의사항 연동 실패:", err);
+    }
     enterDashboard();
   } else {
     showLoginGate();
@@ -1935,7 +1939,11 @@ async function handleLogin(e) {
       state.selectedGeneration = matchedMember.generation ? String(matchedMember.generation) : "";
     }
 
-    await syncInquiries();
+    try {
+      await syncInquiries();
+    } catch (err) {
+      console.warn("로그인 후 문의사항 연동 실패:", err);
+    }
     enterDashboard();
   } else {
     errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> 학번 또는 비밀번호가 일치하지 않습니다.`;
