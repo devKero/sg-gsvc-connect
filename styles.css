@@ -851,6 +851,12 @@ a {
   color: #ffffff;
 }
 
+.card-actions-row {
+  display: flex;
+  gap: 0.4rem;
+  width: 100%;
+}
+
 .grid-view .btn-view-profile {
   font-family: var(--font-body);
   font-weight: 700;
@@ -867,6 +873,35 @@ a {
 
 .grid-view .btn-view-profile:hover {
   background-color: var(--color-sogang-glow);
+}
+
+.grid-view .card-actions-row .btn-view-profile {
+  width: auto;
+  flex: 1.2;
+  padding: 0.3rem 0.5rem;
+}
+
+.btn-card-send-dm {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.75rem;
+  background-color: var(--color-sogang);
+  color: #ffffff;
+  border: 1px solid var(--color-sogang);
+  padding: 0.3rem 0.5rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.btn-card-send-dm:hover {
+  background-color: var(--color-sogang-glow);
+  border-color: var(--color-sogang-glow);
 }
 
 /* 관리자 삭제 아이콘 위치 조절 (그리드뷰) */
@@ -1117,6 +1152,18 @@ html[data-theme="dark"] .list-view .member-card:hover {
   background-color: var(--color-sogang);
   color: #ffffff;
   box-shadow: 0 3px 8px rgba(182, 0, 5, 0.2);
+}
+
+.list-view .card-actions-row .btn-view-profile {
+  padding: 0.35rem 0.6rem;
+  border-radius: 30px;
+  width: auto;
+  flex: 1.2;
+}
+
+.list-view .btn-card-send-dm {
+  padding: 0.35rem 0.6rem;
+  border-radius: 30px;
 }
 
 /* 관리자 삭제 아이콘 위치 조절 (리스트뷰) */

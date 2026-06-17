@@ -1551,20 +1551,7 @@ function setupEventListeners() {
       openDmSendModal();
     });
   }
-  // 회원 상세 보기 내 쪽지 보내기 버튼 클릭
-  const btnProfileSendDm = document.getElementById('btnProfileSendDm');
-  if (btnProfileSendDm) {
-    btnProfileSendDm.addEventListener('click', () => {
-      if (state.selectedMemberId) {
-        const targetMember = state.members.find(m => m.id === state.selectedMemberId);
-        if (targetMember) {
-          closeProfileModal();
-          state.activeDmOpponentId = state.selectedMemberId;
-          openDmInboxModal();
-        }
-      }
-    });
-  }
+
 
   // --- 개인정보 처리방침 모달 관련 리스너 ---
   const btnLoginShowPrivacy = document.getElementById('btnLoginShowPrivacy');
@@ -2703,6 +2690,11 @@ function renderMembersGrid(resetLimit = false) {
 
     const snsOnlyIconsHtml = getSnsLinksCardHtml(member.snsLinks);
 
+    const canSendDm = state.currentUser && !state.currentUser.isGuest && state.currentUser.id !== member.id;
+    const dmButtonHtml = canSendDm ? `
+      <button class="btn-card-send-dm" data-id="${member.id}"><i class="fa-solid fa-paper-plane"></i> 쪽지</button>
+    ` : '';
+
     card.innerHTML = `
       <div class="card-banner"></div>
       <div class="card-avatar" style="background-color: ${avatarBg};">
@@ -2733,7 +2725,10 @@ function renderMembersGrid(resetLimit = false) {
         <div class="card-contacts" style="display:flex; justify-content:center; gap:0.5rem; ${member.email ? '' : 'border-top:1px solid var(--color-border); padding-top:0.4rem;'}">
           ${snsOnlyIconsHtml}
         </div>
-        <button class="btn-view-profile" data-id="${member.id}">상세 프로필 보기</button>
+        <div class="card-actions-row">
+          <button class="btn-view-profile" data-id="${member.id}">상세 프로필 보기</button>
+          ${dmButtonHtml}
+        </div>
       </div>
     `;
 
@@ -2753,11 +2748,20 @@ function renderMembersGrid(resetLimit = false) {
       openProfileModal(member.id);
     });
 
+    // 쪽지 보내기 버튼 클릭
+    if (canSendDm) {
+      card.querySelector('.btn-card-send-dm').addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.activeDmOpponentId = member.id;
+        openDmInboxModal();
+      });
+    }
+
     // 카드 전체 클릭으로도 상세 모달 열기 (모바일 대응)
     card.style.cursor = 'pointer';
     card.addEventListener('click', (e) => {
       // 카드 내부 인터랙티브 요소 클릭 시에는 무시
-      if (e.target.closest('.copy-email-btn, .contact-icon, .btn-view-profile, a')) return;
+      if (e.target.closest('.copy-email-btn, .contact-icon, .btn-view-profile, .btn-card-send-dm, a')) return;
       openProfileModal(member.id);
     });
 
@@ -2831,15 +2835,7 @@ function openProfileModal(memberId, fromAdmin = false) {
   const member = state.members.find(m => m.id === memberId);
   if (!member) return;
 
-  // 쪽지 보내기 버튼 제어 (자기 자신이나 비로그인 게스트인 경우는 숨김, 타인일 때 노출)
-  const sendDmBtn = document.getElementById('btnProfileSendDm');
-  if (sendDmBtn) {
-    if (state.currentUser && !state.currentUser.isGuest && state.currentUser.id !== memberId) {
-      sendDmBtn.style.display = 'inline-block';
-    } else {
-      sendDmBtn.style.display = 'none';
-    }
-  }
+
 
   // 운영진 전용 기본 학적 정보 수정 필드 - 어드민 대시보드 편집 버튼으로 열었을 때만 노출
   const adminFieldsEl = document.getElementById('editAdminOnlyFields');
@@ -2953,12 +2949,15 @@ function openProfileModal(memberId, fromAdmin = false) {
 
   // 2. 편집 권한 체크 (자기 자신의 프로필인 경우에만 수정 버튼 노출 / 운영진은 운영관리 탭을 통해 수정)
   const editBtn = document.getElementById('editProfileBtn');
+  const actionBar = document.querySelector('.modal-action-bar');
   if (editBtn) {
     const isSelf = state.currentUser && state.currentUser.id === member.id;
     if (isSelf) {
       editBtn.classList.remove('hidden');
+      if (actionBar) actionBar.style.display = 'flex';
     } else {
       editBtn.classList.add('hidden');
+      if (actionBar) actionBar.style.display = 'none';
     }
   }
 
