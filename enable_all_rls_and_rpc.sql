@@ -25,6 +25,11 @@ DROP POLICY IF EXISTS "본인 정보 수정 허용" ON public.members;
 DROP POLICY IF EXISTS "운영진 회원 관리 제어 허용" ON public.members;
 DROP POLICY IF EXISTS "전체 원우 조회 허용" ON public.members;
 
+-- 기존 오버로딩된 guestbook bigint 버전 함수들 제거 (Multiple Choices 300 에러 방지)
+DROP FUNCTION IF EXISTS public.rpc_like_guestbook(bigint);
+DROP FUNCTION IF EXISTS public.rpc_delete_guestbook(text, text, bigint);
+
+
 DROP POLICY IF EXISTS "본인 송수신 쪽지만 조회 허용" ON public.messages;
 DROP POLICY IF EXISTS "본인 명의 쪽지 발송 허용" ON public.messages;
 DROP POLICY IF EXISTS "수신인 쪽지 읽음 처리 허용" ON public.messages;
