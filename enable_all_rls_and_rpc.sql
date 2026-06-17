@@ -430,9 +430,20 @@ BEGIN
     END IF;
 
     RETURN QUERY
-    SELECT i.id, i.student_id, i.author, i.title, i.message, i.reply, i.replied_by, i.status, i.created_at, i.deleted_at
+    SELECT 
+        i.id, 
+        COALESCE(m.student_id, i.student_id) AS student_id,
+        i.author, 
+        i.title, 
+        i.message, 
+        i.reply, 
+        i.replied_by, 
+        i.status, 
+        i.created_at, 
+        i.deleted_at
     FROM public.inquiries i
-    WHERE i.student_id = p_student_id
+    LEFT JOIN public.members m ON (i.student_id = m.id OR i.student_id = m.student_id)
+    WHERE i.student_id = p_student_id OR i.student_id = p_user_id
     ORDER BY i.created_at DESC;
 END;
 $$;
@@ -468,8 +479,19 @@ BEGIN
     END IF;
 
     RETURN QUERY
-    SELECT i.id, i.student_id, i.author, i.title, i.message, i.reply, i.replied_by, i.status, i.created_at, i.deleted_at
+    SELECT 
+        i.id, 
+        COALESCE(m.student_id, i.student_id) AS student_id,
+        i.author, 
+        i.title, 
+        i.message, 
+        i.reply, 
+        i.replied_by, 
+        i.status, 
+        i.created_at, 
+        i.deleted_at
     FROM public.inquiries i
+    LEFT JOIN public.members m ON (i.student_id = m.id OR i.student_id = m.student_id)
     ORDER BY i.created_at DESC;
 END;
 $$;

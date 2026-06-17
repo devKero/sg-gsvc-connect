@@ -4470,7 +4470,7 @@ function updateMyInquiriesCount() {
     countEl.innerText = "0";
     return;
   }
-  const myCount = state.inquiries.filter(i => i.studentId === state.currentUser.id && i.status !== 'deleted').length;
+  const myCount = state.inquiries.filter(i => (i.studentId === state.currentUser.studentId || i.studentId === state.currentUser.id) && i.status !== 'deleted').length;
   countEl.innerText = String(myCount);
 }
 
@@ -4484,7 +4484,7 @@ async function handleInquirySubmit(e) {
   const author = authorInput.value.trim();
   const title = titleInput.value.trim();
   const message = messageInput.value.trim();
-  const studentId = state.currentUser ? state.currentUser.id : 'guest';
+  const studentId = state.currentUser ? state.currentUser.studentId : 'guest';
 
   if (!author || !message) return;
 
@@ -4546,7 +4546,7 @@ function renderMyInquiries() {
     return;
   }
 
-  const myInqs = state.inquiries.filter(i => i.studentId === state.currentUser.id && i.status !== 'deleted');
+  const myInqs = state.inquiries.filter(i => (i.studentId === state.currentUser.studentId || i.studentId === state.currentUser.id) && i.status !== 'deleted');
   if (myInqs.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--color-text-dim);"><i class="fa-regular fa-folder-open" style="font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i> 아직 등록된 문의 내역이 없습니다.</div>`;
     return;
