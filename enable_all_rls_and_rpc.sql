@@ -196,7 +196,7 @@ BEGIN
     END IF;
 
     -- 시퀀스를 이용한 고유 순차 ID 발급
-    v_member_id := 'member_' || nextval('public.members_id_seq');
+    v_member_id := 'pid_' || nextval('public.members_id_seq');
 
     -- 신규 멤버 삽입
     INSERT INTO public.members (
@@ -743,7 +743,7 @@ BEGIN
     END IF;
 
     -- 시퀀스를 이용한 고유 순차 ID 발급
-    v_member_id := 'member_' || nextval('public.members_id_seq');
+    v_member_id := 'pid_' || nextval('public.members_id_seq');
 
     -- 신규 멤버 삽입
     INSERT INTO public.members (

@@ -1685,7 +1685,7 @@ async function handleSignupSubmit(e) {
   }
 
   const newMember = {
-    id: `member_${Date.now()}`,
+    id: `pid_${Date.now()}`,
     studentId,
     password: password,
     name,
@@ -3278,7 +3278,7 @@ async function handleAddMemberSubmit(e) {
 
   // 2. 신규 멤버 객체 빌드
   const newMember = {
-    id: `member_${Date.now()}`,
+    id: `pid_${Date.now()}`,
     studentId,
     password: hashedPassword,
     name,
@@ -4097,7 +4097,7 @@ async function submitExcelData() {
     } else {
       // 신규 등록
       const newMember = {
-        id: `member_${Date.now()}_${i}`,
+        id: `pid_${Date.now()}_${i}`,
         studentId: row.studentId,
         password: hashedPassword,
         name: row.name,
