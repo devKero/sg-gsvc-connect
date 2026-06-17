@@ -2592,9 +2592,11 @@ function renderMembersGrid(resetLimit = false) {
 
   // 필터링 적용
   const filtered = state.members.filter(member => {
-    if (member.id === 'admin') return false;
+    if (member.id === 'admin' || member.id === 'pid_admin') return false;
     if (member.role === 'deleted') return false;
     if (member.role === 'pending') return false;
+    if (member.role === 'admin') return false;
+    if (member.role === 'super_admin') return false;
 
     // 1. 검색어 필터링 (이름, 헤드라인, 태그, 소개글, 자유 기재 내용, SNS 링크)
     const matchesSearch = 
