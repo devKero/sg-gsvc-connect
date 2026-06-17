@@ -3686,6 +3686,9 @@ html[data-theme="dark"] .list-view .member-card:hover {
 
 .admin-tab-menu button {
   transition: all 0.2s ease;
+  border-bottom: 3px solid transparent !important;
+  font-weight: 500;
+  color: var(--color-text-sub);
 }
 .admin-tab-menu button:hover {
   color: var(--color-sogang) !important;
