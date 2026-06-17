@@ -1013,3 +1013,43 @@ BEGIN
 END;
 $$;
 
+
+-- =========================================================================
+-- 6. 운영진 회원 등급(역할) 변경 RPC 보안 함수
+-- =========================================================================
+DROP FUNCTION IF EXISTS public.rpc_update_member_role(text, text, text, text);
+
+CREATE OR REPLACE FUNCTION public.rpc_update_member_role(
+    p_admin_id text,
+    p_admin_password_hash text,
+    p_target_member_id text,
+    p_new_role text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- 어드민 자격 검증 (최고 관리자 또는 일반 관리자만 가능하도록 함)
+    IF NOT EXISTS (
+        SELECT 1 FROM public.members 
+        WHERE id = p_admin_id AND password = p_admin_password_hash AND role IN ('admin', 'super_admin')
+    ) THEN
+        RAISE EXCEPTION '권한 거부: 운영진이 아니거나 비밀번호가 틀려 멤버의 권한을 수정할 수 없습니다.';
+    END IF;
+
+    -- 대상 멤버가 최고 관리자일 경우 권한 강등 방지 (보안 조치)
+    IF EXISTS (
+        SELECT 1 FROM public.members 
+        WHERE id = p_target_member_id AND role = 'super_admin'
+    ) THEN
+        RAISE EXCEPTION '권한 거부: 최고 관리자의 권한은 변경할 수 없습니다.';
+    END IF;
+
+    -- 권한 변경
+    UPDATE public.members
+    SET role = p_new_role
+    WHERE id = p_target_member_id;
+END;
+$$;
+
