@@ -1436,13 +1436,14 @@ html[data-theme="dark"] .list-view .member-card:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  justify-content: flex-start; /* 이름 바로 옆에 수정 버튼이 위치하여 가로 겹침 원천 차단 */
+  justify-content: space-between;
 }
 
 .name-edit-row h2 {
   font-size: 1.40rem;
   font-weight: 700;
   color: var(--color-text-main);
+  flex: 1;
 }
 
 .btn-edit-profile {
