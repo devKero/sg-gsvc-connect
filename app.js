@@ -1642,7 +1642,6 @@ async function handleSignupSubmit(e) {
   const generationVal = document.getElementById('signupGeneration').value.trim();
   const degreeProcess = document.getElementById('signupDegreeProcess').value.trim();
   const classYear = document.getElementById('signupClassYear').value.trim();
-  const email = document.getElementById('signupEmail').value.trim();
 
   if (!studentId || !name || !password || !degreeProcess || !classYear) {
     alert("필수 항목을 모두 입력해 주세요.");
@@ -1656,10 +1655,6 @@ async function handleSignupSubmit(e) {
 
   if (password !== passwordConfirm) {
     alert("비밀번호 확인이 일치하지 않습니다.");
-    return;
-  }
-
-  if (!validateEmail(email)) {
     return;
   }
 
@@ -1680,7 +1675,6 @@ async function handleSignupSubmit(e) {
     studentId,
     password: password,
     name,
-    email,
     classYear,
     generation,
     headline: "운영진 승인 대기 중인 가입 신청입니다.",
@@ -1705,7 +1699,6 @@ async function handleSignupSubmit(e) {
           studentId: newMember.studentId,
           password: newMember.password,
           name: newMember.name,
-          email: newMember.email,
           classYear: newMember.classYear,
           generation: newMember.generation,
           headline: newMember.headline,
