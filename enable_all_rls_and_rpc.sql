@@ -8,16 +8,19 @@
 -- =========================================================================
 
 -- =========================================================================
--- 0. 기존 데이터 초기화 및 ID 시퀀스 설정 (정식 오픈 전 청소)
+-- 0. 기존 데이터 초기화 및 ID 시퀀스 설정 (정식 오픈 전 전체 청소 시에만 주석을 해제하여 사용하세요)
 -- =========================================================================
-TRUNCATE TABLE public.messages CASCADE;
-TRUNCATE TABLE public.inquiries CASCADE;
-TRUNCATE TABLE public.guestbook CASCADE;
-TRUNCATE TABLE public.members CASCADE;
-TRUNCATE TABLE public.quick_links CASCADE;
+-- TRUNCATE TABLE public.messages CASCADE;
+-- TRUNCATE TABLE public.inquiries CASCADE;
+-- TRUNCATE TABLE public.guestbook CASCADE;
+-- TRUNCATE TABLE public.members CASCADE;
+-- TRUNCATE TABLE public.quick_links CASCADE;
+-- 
+-- DROP SEQUENCE IF EXISTS public.members_id_seq;
+-- CREATE SEQUENCE public.members_id_seq START WITH 1;
 
-DROP SEQUENCE IF EXISTS public.members_id_seq;
-CREATE SEQUENCE public.members_id_seq START WITH 1;
+-- 테이블 및 데이터 유지 상태에서 시퀀스 안전성 확보
+CREATE SEQUENCE IF NOT EXISTS public.members_id_seq START WITH 1;
 
 -- -------------------------------------------------------------------------
 -- 1. 모든 테이블 RLS 활성화 및 정책 초기화
