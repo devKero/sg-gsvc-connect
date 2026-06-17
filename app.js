@@ -2949,15 +2949,12 @@ function openProfileModal(memberId, fromAdmin = false) {
 
   // 2. 편집 권한 체크 (자기 자신의 프로필인 경우에만 수정 버튼 노출 / 운영진은 운영관리 탭을 통해 수정)
   const editBtn = document.getElementById('editProfileBtn');
-  const actionBar = document.querySelector('.modal-action-bar');
   if (editBtn) {
     const isSelf = state.currentUser && state.currentUser.id === member.id;
     if (isSelf) {
       editBtn.classList.remove('hidden');
-      if (actionBar) actionBar.style.display = 'flex';
     } else {
       editBtn.classList.add('hidden');
-      if (actionBar) actionBar.style.display = 'none';
     }
   }
 
