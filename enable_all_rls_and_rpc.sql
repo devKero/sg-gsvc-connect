@@ -257,6 +257,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+#variable_conflict use_column
 BEGIN
     -- 회원 자격 검증
     IF NOT EXISTS (
@@ -412,6 +413,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+#variable_conflict use_column
 BEGIN
     -- 회원 인증
     IF NOT EXISTS (
@@ -449,6 +451,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+#variable_conflict use_column
 BEGIN
     -- 어드민 자격 검증
     IF NOT EXISTS (
