@@ -25,9 +25,15 @@ DROP POLICY IF EXISTS "본인 정보 수정 허용" ON public.members;
 DROP POLICY IF EXISTS "운영진 회원 관리 제어 허용" ON public.members;
 DROP POLICY IF EXISTS "전체 원우 조회 허용" ON public.members;
 
--- 기존 오버로딩된 guestbook bigint 버전 함수들 제거 (Multiple Choices 300 에러 방지)
+-- 기존 오버로딩된 bigint 버전 함수들 제거 (Multiple Choices 300 및 리턴타입 미매칭 에러 방지)
 DROP FUNCTION IF EXISTS public.rpc_like_guestbook(bigint);
 DROP FUNCTION IF EXISTS public.rpc_delete_guestbook(text, text, bigint);
+DROP FUNCTION IF EXISTS public.rpc_get_my_messages(text, text);
+DROP FUNCTION IF EXISTS public.rpc_delete_message_tombstone(text, text, bigint);
+DROP FUNCTION IF EXISTS public.rpc_reply_inquiry_admin(text, text, bigint, text, text);
+DROP FUNCTION IF EXISTS public.rpc_update_inquiry_status(text, text, bigint, text, timestamp with time zone);
+DROP FUNCTION IF EXISTS public.rpc_get_my_inquiries(text, text, text);
+DROP FUNCTION IF EXISTS public.rpc_get_all_inquiries_admin(text, text);
 
 
 DROP POLICY IF EXISTS "본인 송수신 쪽지만 조회 허용" ON public.messages;
@@ -244,7 +250,7 @@ CREATE OR REPLACE FUNCTION public.rpc_get_my_messages(
     p_password_hash text
 )
 RETURNS TABLE (
-    id bigint,
+    id uuid,
     sender_id text,
     receiver_id text,
     sender_name text,
@@ -307,7 +313,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.rpc_delete_message_tombstone(
     p_user_id text,
     p_password_hash text,
-    p_message_id bigint
+    p_message_id uuid
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -399,7 +405,7 @@ CREATE OR REPLACE FUNCTION public.rpc_get_my_inquiries(
     p_student_id text
 )
 RETURNS TABLE (
-    id bigint,
+    id uuid,
     student_id text,
     author text,
     title text,
@@ -437,7 +443,7 @@ CREATE OR REPLACE FUNCTION public.rpc_get_all_inquiries_admin(
     p_admin_password_hash text
 )
 RETURNS TABLE (
-    id bigint,
+    id uuid,
     student_id text,
     author text,
     title text,
@@ -472,7 +478,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.rpc_reply_inquiry_admin(
     p_admin_id text,
     p_admin_password_hash text,
-    p_inquiry_id bigint,
+    p_inquiry_id uuid,
     p_reply_text text,
     p_replied_by text
 )
@@ -499,7 +505,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.rpc_update_inquiry_status(
     p_user_id text,
     p_password_hash text,
-    p_inquiry_id bigint,
+    p_inquiry_id uuid,
     p_status text,
     p_deleted_at timestamp with time zone DEFAULT NULL
 )
