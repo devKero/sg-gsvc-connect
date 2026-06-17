@@ -4970,7 +4970,6 @@ function renderAdminInquiries() {
 
     tr.innerHTML = `
       <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(inq.author)}</td>
-      <td class="table-col-student-id" style="font-family: monospace; color: var(--color-text-sub);">${escapeHtml(inq.studentId)}</td>
       <td style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(inq.title || "제목 없음")}</td>
       <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${escapeHtml(inq.message)}</td>
       <td class="table-col-date" style="font-size: 0.72rem; color: var(--color-text-dim);">${formattedDate}</td>
