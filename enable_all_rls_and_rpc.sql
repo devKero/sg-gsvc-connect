@@ -182,7 +182,7 @@ BEGIN
         COALESCE(p_new_member->>'headline', '서강대 가상융합전문대학원 원우'),
         COALESCE(p_new_member->>'avatarColor', '#7f8c8d'),
         COALESCE(p_new_member->'snsLinks', '[]'::jsonb),
-        COALESCE(p_new_member->'tags', '[]'::jsonb),
+        COALESCE(ARRAY(SELECT jsonb_array_elements_text(p_new_member->'tags')), '{}'::text[]),
         COALESCE(p_new_member->>'bio', ''),
         COALESCE(p_new_member->>'projects', ''),
         COALESCE(p_new_member->>'customContent', ''),
@@ -698,7 +698,7 @@ BEGIN
         '운영진 승인 대기 중인 가입 신청입니다.', -- 가입신청 기본 헤드라인
         COALESCE(p_new_member->>'avatarColor', '#7f8c8d'),
         COALESCE(p_new_member->'snsLinks', '[]'::jsonb),
-        COALESCE(p_new_member->'tags', '[]'::jsonb),
+        COALESCE(ARRAY(SELECT jsonb_array_elements_text(p_new_member->'tags')), '{}'::text[]),
         COALESCE(p_new_member->>'bio', ''),
         COALESCE(p_new_member->>'projects', ''),
         COALESCE(p_new_member->>'customContent', ''),
