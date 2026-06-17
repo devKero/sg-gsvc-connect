@@ -832,11 +832,7 @@ function checkSession() {
       state.selectedGeneration = userMember && userMember.generation ? String(userMember.generation) : "";
     }
     
-    try {
-      await syncInquiries();
-    } catch (err) {
-      console.warn("로그인 후 문의사항 연동 실패:", err);
-    }
+    syncInquiries();
     enterDashboard();
   } else {
     showLoginGate();
