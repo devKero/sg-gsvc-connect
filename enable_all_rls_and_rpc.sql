@@ -47,6 +47,10 @@ DROP FUNCTION IF EXISTS public.rpc_update_inquiry_status(text, text, bigint, tex
 DROP FUNCTION IF EXISTS public.rpc_get_my_inquiries(text, text, text);
 DROP FUNCTION IF EXISTS public.rpc_get_all_inquiries_admin(text, text);
 
+-- 기존 void 리턴형 함수들 제거 (리턴타입 변경에 의한 42P13 에러 방지)
+DROP FUNCTION IF EXISTS public.rpc_insert_member(text, text, jsonb);
+DROP FUNCTION IF EXISTS public.rpc_request_signup(jsonb);
+
 
 DROP POLICY IF EXISTS "본인 송수신 쪽지만 조회 허용" ON public.messages;
 DROP POLICY IF EXISTS "본인 명의 쪽지 발송 허용" ON public.messages;
