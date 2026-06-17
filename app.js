@@ -2921,8 +2921,49 @@ function openProfileModal(memberId, fromAdmin = false) {
   const modalTagsSection = document.getElementById('modalTagsSection');
   const tagsContainer = document.getElementById('modalTagsContainer');
   if (member.tags && member.tags.length > 0) {
-    tagsContainer.innerHTML = member.tags.map(t => `<span class="card-tag">#${escapeHtml(t)}</span>`).join('');
+    const maxVisibleTags = 8;
+    const hasMore = member.tags.length > maxVisibleTags;
+    
+    let tagsHtml = member.tags.map((t, idx) => {
+      const isHidden = hasMore && idx >= maxVisibleTags ? 'hidden' : '';
+      return `<span class="card-tag ${isHidden}">#${escapeHtml(t)}</span>`;
+    }).join('');
+
+    if (hasMore) {
+      tagsHtml += `
+        <button id="btnToggleAllTags" class="btn btn-sm btn-light" style="padding: 0.15rem 0.5rem; font-size: 0.7rem; border-radius: 10px; margin-left: 0.25rem; font-weight: 600; border: 1px solid var(--color-border); background-color: var(--color-bg-input); cursor: pointer; color: var(--color-text-main);">
+          + 더 보기 (${member.tags.length - maxVisibleTags}개)
+        </button>
+      `;
+    }
+    
+    tagsContainer.innerHTML = tagsHtml;
     modalTagsSection.classList.remove('hidden');
+
+    if (hasMore) {
+      const btnToggle = document.getElementById('btnToggleAllTags');
+      if (btnToggle) {
+        btnToggle.addEventListener('click', () => {
+          const isExpanded = btnToggle.innerText.includes('접기');
+          
+          if (isExpanded) {
+            // 접기
+            tagsContainer.querySelectorAll('.card-tag').forEach((tag, idx) => {
+              if (idx >= maxVisibleTags) {
+                tag.classList.add('hidden');
+              }
+            });
+            btnToggle.innerText = `+ 더 보기 (${member.tags.length - maxVisibleTags}개)`;
+          } else {
+            // 펼치기
+            tagsContainer.querySelectorAll('.card-tag').forEach(tag => {
+              tag.classList.remove('hidden');
+            });
+            btnToggle.innerText = `- 접기`;
+          }
+        });
+      }
+    }
   } else {
     tagsContainer.innerHTML = "";
     modalTagsSection.classList.add('hidden');
@@ -4231,14 +4272,17 @@ function parseMarkdownToHtml(str) {
   lines.forEach(line => {
     let trimmed = line.trim();
     
-    // 소제목: ### 텍스트
-    if (trimmed.startsWith("###")) {
+    // 제목: #, ##, ###, ####, ##### 텍스트
+    const headerMatch = trimmed.match(/^(#{1,5})\s*(.*)$/);
+    if (headerMatch) {
       if (inList) {
         htmlResult.push("</ul>");
         inList = false;
       }
-      const titleText = trimmed.replace(/^###\s*/, "");
-      htmlResult.push(`<h5 class="markdown-title">${titleText}</h5>`);
+      const level = headerMatch[1].length;
+      const titleText = headerMatch[2];
+      const hTag = level === 1 ? 'h3' : (level === 2 ? 'h4' : (level === 3 ? 'h5' : 'h6'));
+      htmlResult.push(`<${hTag} class="markdown-title level-${level}">${titleText}</${hTag}>`);
       return;
     }
     
