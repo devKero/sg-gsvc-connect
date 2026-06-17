@@ -2865,13 +2865,8 @@ function openProfileModal(memberId, fromAdmin = false) {
   // 소개글 (bio) 바인딩 및 노출 제어
   const modalBioSection = document.getElementById('modalBioSection');
   const modalBio = document.getElementById('modalBio');
-  if (member.bio) {
-    modalBio.innerHTML = parseMarkdownToHtml(member.bio);
-    if (modalBioSection) modalBioSection.classList.remove('hidden');
-  } else {
-    modalBio.innerHTML = "";
-    if (modalBioSection) modalBioSection.classList.add('hidden');
-  }
+  modalBio.innerHTML = parseMarkdownToHtml(member.bio || "소개글이 아직 등록되지 않았습니다.");
+  if (modalBioSection) modalBioSection.classList.remove('hidden');
 
   // 학력 정보 노출 제어
   const modalEducationSection = document.getElementById('modalEducationSection');
