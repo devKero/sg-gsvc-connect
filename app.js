@@ -2705,7 +2705,7 @@ function renderMembersGrid(resetLimit = false) {
     const genColor = getGenerationColor(member.generation);
     card.style.setProperty('--cohort-color', genColor);
     
-    const avatarBg = member.avatarColor || '#B30838';
+    const avatarBg = genColor;
     const tagsHtml = (member.tags || []).map(tag => `<span class="card-tag">#${escapeHtml(tag)}</span>`).join('');
 
     const snsOnlyIconsHtml = getSnsLinksCardHtml(member.snsLinks);
@@ -2865,7 +2865,7 @@ function openProfileModal(memberId) {
   } else {
     modalAvatarEl.innerText = member.name[0];
   }
-  modalAvatarEl.style.backgroundColor = member.avatarColor || '#B30838';
+  modalAvatarEl.style.backgroundColor = getGenerationColor(member.generation);
   document.getElementById('modalName').innerText = member.name;
   
   const classText = `${member.generation ? `${member.generation}기 · ` : ''}${member.degreeProcess ? `${member.degreeProcess} 과정` : ''} / ${member.classYear}`;
@@ -5485,7 +5485,7 @@ function renderDmThreadList() {
     // 기수와 아바타 장식
     const partner = state.members.find(m => m.id === t.opponentId);
     const initialChar = t.opponentName ? t.opponentName.substring(0, 1) : '?';
-    const bgCol = partner && partner.avatarColor ? partner.avatarColor : '#b30838';
+    const bgCol = partner ? getGenerationColor(partner.generation) : '#a0aec0';
 
     item.innerHTML = `
       <div class="dm-thread-avatar" style="background-color: ${bgCol}; color: #fff; font-weight: 700; user-select: none;">
