@@ -3670,6 +3670,11 @@ html[data-theme="dark"] .list-view .member-card:hover {
   background-color: #fed7d7;
   color: #9b2c2c;
 }
+.inquiry-status-badge.admin-deleted {
+  background-color: #b30838;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
 
 .inquiry-reply-box {
   background-color: #ebf8ff;

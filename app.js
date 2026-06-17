@@ -622,8 +622,8 @@ async function autoPurgeTrash() {
 
     const initialInquiriesLen = state.inquiries.length;
     state.inquiries = state.inquiries.filter(i => {
-      if (i.status !== 'deleted') return true;
-      const deletedTime = i.deletedAt ? new Date(i.deletedAt) : (i.createdAt ? new Date(i.createdAt) : null);
+      if (i.status !== 'deleted' && i.status !== 'admin_deleted') return true;
+      const deletedTime = i.deleted_at ? new Date(i.deleted_at) : (i.deletedAt ? new Date(i.deletedAt) : (i.createdAt ? new Date(i.createdAt) : null));
       return !deletedTime || deletedTime >= purgeCutoff;
     });
 
@@ -2220,7 +2220,7 @@ function renderAdminDashboard() {
   // 대시보드 상단 탭 뱃지 개수 업데이트 (빠른 링크 및 문의사항 동기화)
   const inqCountEl = document.getElementById('adminInquiryCount');
   if (inqCountEl) {
-    const activeInqs = state.inquiries.filter(i => i.status !== 'deleted');
+    const activeInqs = state.inquiries.filter(i => i.status !== 'deleted' && i.status !== 'admin_deleted');
     inqCountEl.innerText = String(activeInqs.length);
   }
   const quickLinksCountEl = document.getElementById('adminQuickLinksCount');
@@ -4558,7 +4558,7 @@ function updateMyInquiriesCount() {
     countEl.innerText = "0";
     return;
   }
-  const myCount = state.inquiries.filter(i => (i.studentId === state.currentUser.studentId || i.studentId === state.currentUser.id) && i.status !== 'deleted').length;
+  const myCount = state.inquiries.filter(i => (i.studentId === state.currentUser.studentId || i.studentId === state.currentUser.id) && i.status !== 'deleted').length; // admin_deleted는 개수에 포함
   countEl.innerText = String(myCount);
 }
 
@@ -4644,21 +4644,32 @@ function renderMyInquiries() {
     const card = document.createElement('div');
     card.className = 'my-inquiry-card';
 
-    const statusText = inq.status === 'resolved' ? '답변 완료' : '답변 대기';
-    const statusClass = inq.status === 'resolved' ? 'resolved' : 'pending';
+    const isAdminDeleted = inq.status === 'admin_deleted';
+    let statusText, statusClass;
+    if (isAdminDeleted) {
+      statusText = '운영진 삭제';
+      statusClass = 'admin-deleted';
+    } else if (inq.status === 'resolved') {
+      statusText = '답변 완료';
+      statusClass = 'resolved';
+    } else {
+      statusText = '답변 대기';
+      statusClass = 'pending';
+    }
     const formattedDate = inq.createdAt ? inq.createdAt.substring(0, 10) + ' ' + inq.createdAt.substring(11, 16) : '-';
 
     card.innerHTML = `
       <div class="my-inquiry-header">
-        <strong style="color:var(--color-text-main); font-size:0.85rem;">${escapeHtml(inq.title || "제목 없음")}</strong>
+        <strong style="color:var(--color-text-main); font-size:0.85rem; ${isAdminDeleted ? 'text-decoration: line-through; opacity:0.6;' : ''}">${escapeHtml(inq.title || "제목 없음")}</strong>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <span class="inquiry-status-badge ${statusClass}">${statusText}</span>
-          ${inq.status === 'pending' ? `<button class="btn btn-light btn-sm btn-delete-my-inquiry" data-id="${inq.id}" style="padding: 0.15rem 0.35rem; font-size: 0.7rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2); cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>` : ''}
+          ${(!isAdminDeleted && inq.status === 'pending') ? `<button class="btn btn-light btn-sm btn-delete-my-inquiry" data-id="${inq.id}" style="padding: 0.15rem 0.35rem; font-size: 0.7rem; border-radius: 4px; color: var(--color-sogang); border-color: rgba(179,8,56,0.2); cursor: pointer;"><i class="fa-solid fa-trash-can"></i> 삭제</button>` : ''}
         </div>
       </div>
-      <p style="margin: 0.2rem 0; color:var(--color-text-sub); line-height:1.4;">${escapeHtml(inq.message)}</p>
-      <div style="font-size:0.7rem; color:var(--color-text-dim); text-align:right;">${formattedDate}</div>
-      ${inq.reply ? `
+      <p style="margin: 0.2rem 0; color:var(--color-text-sub); line-height:1.4; ${isAdminDeleted ? 'text-decoration: line-through; opacity:0.5;' : ''}">${escapeHtml(inq.message)}</p>
+      ${isAdminDeleted ? `<div style="margin-top:0.4rem; padding:0.35rem 0.6rem; background:rgba(179,8,56,0.08); border-left:3px solid var(--color-sogang); border-radius:0 4px 4px 0; font-size:0.75rem; color:var(--color-sogang);"><i class="fa-solid fa-triangle-exclamation"></i> 운영진에 의해 삭제 처리된 문의사항입니다.</div>` : ''}
+      <div style="font-size:0.7rem; color:var(--color-text-dim); text-align:right; margin-top:0.25rem;">${formattedDate}</div>
+      ${(!isAdminDeleted && inq.reply) ? `
         <div class="inquiry-reply-box">
           <strong style="color:var(--color-sogang); font-size:0.75rem;"><i class="fa-solid fa-reply"></i> 운영진 답변</strong>
           <p style="margin-top:0.25rem; font-size:0.8rem; line-height:1.4; color:var(--color-text-main); white-space:pre-wrap;">${escapeHtml(inq.reply)}</p>
@@ -4945,7 +4956,7 @@ async function handleEmptyAdminTrashClick() {
   if (!supabaseClient) {
     // 로컬 스토리지 모드
     state.members = state.members.filter(m => m.role !== 'deleted');
-    state.inquiries = state.inquiries.filter(i => i.status !== 'deleted');
+    state.inquiries = state.inquiries.filter(i => i.status !== 'deleted' && i.status !== 'admin_deleted');
     localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
     localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
     
@@ -4969,7 +4980,7 @@ async function handleEmptyAdminTrashClick() {
 
     // 로컬 캐시 및 동기화
     state.members = state.members.filter(m => m.role !== 'deleted');
-    state.inquiries = state.inquiries.filter(i => i.status !== 'deleted');
+    state.inquiries = state.inquiries.filter(i => i.status !== 'deleted' && i.status !== 'admin_deleted');
     localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
     localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
 
@@ -4989,8 +5000,8 @@ function renderAdminInquiries() {
   const tbody = document.getElementById('adminInquiryTableBody');
   
   // 1. 활성/휴지통 필터링 및 카운팅
-  const activeInquiries = state.inquiries.filter(i => i.status !== 'deleted');
-  const trashInquiries = state.inquiries.filter(i => i.status === 'deleted');
+  const activeInquiries = state.inquiries.filter(i => i.status !== 'deleted' && i.status !== 'admin_deleted');
+  const trashInquiries = state.inquiries.filter(i => i.status === 'deleted' || i.status === 'admin_deleted');
 
   const mainCountEl = document.getElementById('adminInquiryCount');
   const activeCountEl = document.getElementById('adminActiveInqCount');
@@ -5025,8 +5036,11 @@ function renderAdminInquiries() {
     
     let statusText = '';
     let statusClass = '';
-    if (inq.status === 'deleted') {
-      statusText = '삭제됨';
+    if (inq.status === 'admin_deleted') {
+      statusText = '운영진 삭제';
+      statusClass = 'admin-deleted';
+    } else if (inq.status === 'deleted') {
+      statusText = '유저 삭제';
       statusClass = 'deleted';
     } else if (inq.status === 'resolved') {
       statusText = '답변 완료';
@@ -5091,8 +5105,11 @@ function openAdminInquiryModal(inqId) {
   state.selectedInquiryId = inqId;
 
   const formattedDate = inq.createdAt ? inq.createdAt.substring(0, 16).replace('T', ' ') : '-';
-  const statusText = inq.status === 'resolved' ? '답변 완료' : '접수 대기';
-  const statusClass = inq.status === 'resolved' ? 'resolved' : 'pending';
+  let statusText, statusClass;
+  if (inq.status === 'admin_deleted') { statusText = '운영진 삭제'; statusClass = 'admin-deleted'; }
+  else if (inq.status === 'deleted') { statusText = '유저 삭제'; statusClass = 'deleted'; }
+  else if (inq.status === 'resolved') { statusText = '답변 완료'; statusClass = 'resolved'; }
+  else { statusText = '접수 대기'; statusClass = 'pending'; }
 
   document.getElementById('adminInqAuthor').innerText = inq.author;
   document.getElementById('adminInqStudentId').innerText = inq.studentId;
@@ -5199,12 +5216,12 @@ async function deleteInquiry(inquiryId) {
   const inquiry = state.inquiries.find(i => i.id === inquiryId);
   if (!inquiry) return;
 
-  if (inquiry.status !== 'deleted') {
-    // Soft Delete (move to trash)
-    if (!confirm("이 문의 건을 휴지통으로 이동하시겠습니까?")) return;
+  if (inquiry.status !== 'deleted' && inquiry.status !== 'admin_deleted') {
+    // Soft Delete (move to trash) - 운영진 삭제는 admin_deleted 로 구분 처리
+    if (!confirm("이 문의 건을 휴지통으로 이동하시겠습니까?\n해당 문의 원우의 화면에 '운영진 삭제' 상태로 표시됩니다.")) return;
 
     const nowIso = new Date().toISOString();
-    inquiry.status = 'deleted';
+    inquiry.status = 'admin_deleted';
     inquiry.deleted_at = nowIso;
     localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
 
@@ -5214,7 +5231,7 @@ async function deleteInquiry(inquiryId) {
           p_user_id: state.currentUser ? state.currentUser.id : "",
           p_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
           p_inquiry_id: inquiryId,
-          p_status: 'deleted',
+          p_status: 'admin_deleted',
           p_deleted_at: nowIso
         });
         if (error) throw error;

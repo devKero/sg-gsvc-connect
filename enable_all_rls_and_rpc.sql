@@ -621,7 +621,7 @@ BEGIN
 
     -- 30일이 지난 문의사항 파기
     DELETE FROM public.inquiries
-    WHERE status = 'deleted' AND deleted_at < p_cutoff_time;
+    WHERE status IN ('deleted', 'admin_deleted') AND deleted_at < p_cutoff_time;
 
     -- 30일이 지난 탈퇴/비활성 회원 파기
     DELETE FROM public.members
