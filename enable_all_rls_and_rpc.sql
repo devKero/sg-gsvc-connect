@@ -828,3 +828,136 @@ BEGIN
 END;
 $$;
 
+
+-- =========================================================================
+-- 5. 빠른 링크 (quick_links) 테이블 RLS 활성화 및 RPC 보안 함수 설정
+-- =========================================================================
+
+-- 1) RLS 활성화
+ALTER TABLE public.quick_links ENABLE ROW LEVEL SECURITY;
+
+-- 기존 정책 제거
+DROP POLICY IF EXISTS "Allow public read access on quick_links" ON public.quick_links;
+DROP POLICY IF EXISTS "Allow admin write access on quick_links" ON public.quick_links;
+
+-- 2) 누구나 빠른 링크를 조회할 수 있도록 SELECT 허용 정책 추가
+CREATE POLICY "Allow public read access on quick_links" ON public.quick_links
+FOR SELECT USING (true);
+
+-- 3) 기존 RPC 함수 제거 (오버로딩 충돌 방지)
+DROP FUNCTION IF EXISTS public.rpc_insert_quick_link(text, text, text, text, integer);
+DROP FUNCTION IF EXISTS public.rpc_update_quick_link(text, text, bigint, text, text);
+DROP FUNCTION IF EXISTS public.rpc_delete_quick_link(text, text, bigint);
+DROP FUNCTION IF EXISTS public.rpc_swap_quick_links_order(text, text, bigint, integer, bigint, integer);
+
+-- 4) RPC 보안 함수 생성
+
+-- ① 빠른 링크 추가 RPC
+CREATE OR REPLACE FUNCTION public.rpc_insert_quick_link(
+    p_admin_id text,
+    p_admin_password_hash text,
+    p_title text,
+    p_url text,
+    p_sort_order integer
+)
+RETURNS TABLE (id bigint)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_new_id bigint;
+BEGIN
+    -- 어드민 자격 검증
+    IF NOT EXISTS (
+        SELECT 1 FROM public.members 
+        WHERE id = p_admin_id AND password = p_admin_password_hash AND role IN ('admin', 'super_admin')
+    ) THEN
+        RAISE EXCEPTION '권한 거부: 운영진 권한 인증에 실패했습니다.';
+    END IF;
+
+    INSERT INTO public.quick_links (title, url, sort_order)
+    VALUES (p_title, p_url, p_sort_order)
+    RETURNING public.quick_links.id INTO v_new_id;
+
+    RETURN QUERY SELECT v_new_id;
+END;
+$$;
+
+-- ② 빠른 링크 수정 RPC
+CREATE OR REPLACE FUNCTION public.rpc_update_quick_link(
+    p_admin_id text,
+    p_admin_password_hash text,
+    p_link_id bigint,
+    p_title text,
+    p_url text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- 어드민 자격 검증
+    IF NOT EXISTS (
+        SELECT 1 FROM public.members 
+        WHERE id = p_admin_id AND password = p_admin_password_hash AND role IN ('admin', 'super_admin')
+    ) THEN
+        RAISE EXCEPTION '권한 거부: 운영진 권한 인증에 실패했습니다.';
+    END IF;
+
+    UPDATE public.quick_links
+    SET title = p_title, url = p_url
+    WHERE id = p_link_id;
+END;
+$$;
+
+-- ③ 빠른 링크 삭제 RPC
+CREATE OR REPLACE FUNCTION public.rpc_delete_quick_link(
+    p_admin_id text,
+    p_admin_password_hash text,
+    p_link_id bigint
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- 어드민 자격 검증
+    IF NOT EXISTS (
+        SELECT 1 FROM public.members 
+        WHERE id = p_admin_id AND password = p_admin_password_hash AND role IN ('admin', 'super_admin')
+    ) THEN
+        RAISE EXCEPTION '권한 거부: 운영진 권한 인증에 실패했습니다.';
+    END IF;
+
+    DELETE FROM public.quick_links
+    WHERE id = p_link_id;
+END;
+$$;
+
+-- ④ 빠른 링크 정렬 순서 스왑 RPC
+CREATE OR REPLACE FUNCTION public.rpc_swap_quick_links_order(
+    p_admin_id text,
+    p_admin_password_hash text,
+    p_link1_id bigint,
+    p_link1_order integer,
+    p_link2_id bigint,
+    p_link2_order integer
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- 어드민 자격 검증
+    IF NOT EXISTS (
+        SELECT 1 FROM public.members 
+        WHERE id = p_admin_id AND password = p_admin_password_hash AND role IN ('admin', 'super_admin')
+    ) THEN
+        RAISE EXCEPTION '권한 거부: 운영진 권한 인증에 실패했습니다.';
+    END IF;
+
+    UPDATE public.quick_links SET sort_order = p_link1_order WHERE id = p_link1_id;
+    UPDATE public.quick_links SET sort_order = p_link2_order WHERE id = p_link2_id;
+END;
+$$;
+

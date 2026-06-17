@@ -365,12 +365,17 @@
           </div>
 
           <!-- 문의 관리 서브 탭 -->
-          <div class="admin-sub-tab-menu" style="display: flex; gap: 0.4rem; padding: 0.6rem 1.25rem 0.35rem 1.25rem; border-bottom: 1px solid var(--color-border);">
-            <button id="adminInqTabActive" class="btn btn-sm" style="background: none; border: none; border-bottom: 3px solid var(--color-sogang); border-radius: 0; padding: 0.5rem 1rem; font-weight: 700; color: var(--color-sogang); cursor: pointer;">
-              활성 문의 (<span id="adminActiveInqCount">0</span>)
-            </button>
-            <button id="adminInqTabTrash" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">
-              <i class="fa-solid fa-trash-can"></i> 휴지통 (<span id="adminTrashInqCount">0</span>)
+          <div class="admin-sub-tab-menu" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1.25rem 0.35rem 1.25rem; border-bottom: 1px solid var(--color-border);">
+            <div style="display: flex; gap: 0.4rem;">
+              <button id="adminInqTabActive" class="btn btn-sm" style="background: none; border: none; border-bottom: 3px solid var(--color-sogang); border-radius: 0; padding: 0.5rem 1rem; font-weight: 700; color: var(--color-sogang); cursor: pointer;">
+                활성 문의 (<span id="adminActiveInqCount">0</span>)
+              </button>
+              <button id="adminInqTabTrash" class="btn btn-sm" style="background: none; border: none; border-radius: 0; padding: 0.5rem 1rem; font-weight: 500; color: var(--color-text-sub); cursor: pointer;">
+                <i class="fa-solid fa-trash-can"></i> 휴지통 (<span id="adminTrashInqCount">0</span>)
+              </button>
+            </div>
+            <button id="btnEmptyAdminTrash" class="btn btn-sm hidden" style="background: var(--color-sogang); color: white; border: none; padding: 0.4rem 0.8rem; font-size: 0.72rem; border-radius: 4px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
+              <i class="fa-solid fa-trash-arrow-up"></i> 휴지통 비우기
             </button>
           </div>
 
@@ -379,10 +384,10 @@
               <thead>
                 <tr>
                   <th style="width: 100px;">작성자</th>
-                  <th style="width: 110px;">학번</th>
+                  <th class="table-col-student-id" style="width: 110px;">학번</th>
                   <th style="width: 180px;">제목</th>
                   <th>내용</th>
-                  <th style="width: 150px;">작성일</th>
+                  <th class="table-col-date" style="width: 150px;">작성일</th>
                   <th style="width: 100px;">상태</th>
                   <th style="width: 120px;">관리</th>
                 </tr>

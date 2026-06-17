@@ -1419,6 +1419,10 @@ function setupEventListeners() {
   if (adminInqTabTrash) {
     adminInqTabTrash.addEventListener('click', () => switchAdminInquirySubTab('trash'));
   }
+  const btnEmptyAdminTrash = document.getElementById('btnEmptyAdminTrash');
+  if (btnEmptyAdminTrash) {
+    btnEmptyAdminTrash.addEventListener('click', handleEmptyAdminTrashClick);
+  }
   const adminMemTabActive = document.getElementById('adminMemTabActive');
   if (adminMemTabActive) {
     adminMemTabActive.addEventListener('click', () => switchAdminMemberSubTab('active'));
@@ -4821,6 +4825,7 @@ function switchAdminInquirySubTab(subTab) {
   state.adminInquirySubTab = subTab;
   const btnActive = document.getElementById('adminInqTabActive');
   const btnTrash = document.getElementById('adminInqTabTrash');
+  const btnEmptyTrash = document.getElementById('btnEmptyAdminTrash');
   if (!btnActive || !btnTrash) return;
 
   if (subTab === 'active') {
@@ -4830,6 +4835,7 @@ function switchAdminInquirySubTab(subTab) {
     btnTrash.style.borderBottom = 'none';
     btnTrash.style.fontWeight = '500';
     btnTrash.style.color = 'var(--color-text-sub)';
+    if (btnEmptyTrash) btnEmptyTrash.classList.add('hidden');
   } else {
     btnTrash.style.borderBottom = '3px solid var(--color-sogang)';
     btnTrash.style.fontWeight = '700';
@@ -4837,8 +4843,57 @@ function switchAdminInquirySubTab(subTab) {
     btnActive.style.borderBottom = 'none';
     btnActive.style.fontWeight = '500';
     btnActive.style.color = 'var(--color-text-sub)';
+    if (btnEmptyTrash) btnEmptyTrash.classList.remove('hidden');
   }
   renderAdminInquiries();
+}
+
+// 휴지통 일괄 비우기 핸들러
+async function handleEmptyAdminTrashClick() {
+  if (!confirm("정말로 휴지통을 비우시겠습니까?\n휴지통 내의 삭제된 문의사항 및 탈퇴 회원 데이터가 복구 불가능하게 즉시 영구 삭제됩니다.")) {
+    return;
+  }
+
+  if (!supabaseClient) {
+    // 로컬 스토리지 모드
+    state.members = state.members.filter(m => m.role !== 'deleted');
+    state.inquiries = state.inquiries.filter(i => i.status !== 'deleted');
+    localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+    
+    alert("로컬 스토리지의 휴지통이 비워졌습니다.");
+    renderFilterSelectorsOptions();
+    renderMembersGrid();
+    renderAdminDashboard();
+    renderAdminInquiries();
+    return;
+  }
+
+  // Supabase 클라우드 연동 모드
+  try {
+    const cutoffStr = new Date().toISOString();
+    const { error } = await supabaseClient.rpc('rpc_purge_deleted_items', {
+      p_admin_id: state.currentUser ? state.currentUser.id : "",
+      p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+      p_cutoff_time: cutoffStr
+    });
+    if (error) throw error;
+
+    // 로컬 캐시 및 동기화
+    state.members = state.members.filter(m => m.role !== 'deleted');
+    state.inquiries = state.inquiries.filter(i => i.status !== 'deleted');
+    localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+    localStorage.setItem('sogang_unity_inquiries', JSON.stringify(state.inquiries));
+
+    alert("휴지통을 성공적으로 비웠습니다.");
+    renderFilterSelectorsOptions();
+    renderMembersGrid();
+    renderAdminDashboard();
+    renderAdminInquiries();
+  } catch (err) {
+    console.error("휴지통 비우기 실패:", err);
+    alert(`휴지통 비우기 중 에러가 발생했습니다: ${err.message || err}`);
+  }
 }
 
 // 어드민 문의 목록 렌더링
@@ -4915,10 +4970,10 @@ function renderAdminInquiries() {
 
     tr.innerHTML = `
       <td style="font-weight: 700; color: var(--color-text-main);">${escapeHtml(inq.author)}</td>
-      <td style="font-family: monospace; color: var(--color-text-sub);">${escapeHtml(inq.studentId)}</td>
+      <td class="table-col-student-id" style="font-family: monospace; color: var(--color-text-sub);">${escapeHtml(inq.studentId)}</td>
       <td style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(inq.title || "제목 없음")}</td>
       <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${escapeHtml(inq.message)}</td>
-      <td style="font-size: 0.72rem; color: var(--color-text-dim);">${formattedDate}</td>
+      <td class="table-col-date" style="font-size: 0.72rem; color: var(--color-text-dim);">${formattedDate}</td>
       <td><span class="inquiry-status-badge ${statusClass}">${statusText}</span></td>
       <td>${actionButtonHtml}</td>
     `;
@@ -6009,10 +6064,13 @@ async function handleSaveQuickLinkEdit(linkId) {
   // Supabase 서버 동기화
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient
-        .from('quick_links')
-        .update({ title, url })
-        .eq('id', linkId);
+      const { error } = await supabaseClient.rpc('rpc_update_quick_link', {
+        p_admin_id: state.currentUser ? state.currentUser.id : "",
+        p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+        p_link_id: linkId,
+        p_title: title,
+        p_url: url
+      });
       if (error) throw error;
       alert("링크가 성공적으로 수정되었습니다.");
     } catch (err) {
@@ -6048,19 +6106,15 @@ async function handleMoveQuickLink(currentIndex, direction) {
   // Supabase 서버 동기화
   if (supabaseClient) {
     try {
-      const update1 = supabaseClient
-        .from('quick_links')
-        .update({ sort_order: currentLink.sort_order })
-        .eq('id', currentLink.id);
-        
-      const update2 = supabaseClient
-        .from('quick_links')
-        .update({ sort_order: targetLink.sort_order })
-        .eq('id', targetLink.id);
-        
-      const [res1, res2] = await Promise.all([update1, update2]);
-      if (res1.error) throw res1.error;
-      if (res2.error) throw res2.error;
+      const { error } = await supabaseClient.rpc('rpc_swap_quick_links_order', {
+        p_admin_id: state.currentUser ? state.currentUser.id : "",
+        p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+        p_link1_id: currentLink.id,
+        p_link1_order: currentLink.sort_order,
+        p_link2_id: targetLink.id,
+        p_link2_order: targetLink.sort_order
+      });
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase 퀵링크 순서 동기화 실패:", err);
     }
@@ -6095,10 +6149,13 @@ async function handleAddQuickLinkSubmit(e) {
   
   if (supabaseClient) {
     try {
-      const { data, error } = await supabaseClient
-        .from('quick_links')
-        .insert([{ title, url, sort_order: newLink.sort_order }])
-        .select();
+      const { data, error } = await supabaseClient.rpc('rpc_insert_quick_link', {
+        p_admin_id: state.currentUser ? state.currentUser.id : "",
+        p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+        p_title: title,
+        p_url: url,
+        p_sort_order: newLink.sort_order
+      });
       if (error) throw error;
       
       if (data && data.length > 0) {
@@ -6129,10 +6186,11 @@ async function handleDeleteQuickLink(linkId, title) {
     
     if (supabaseClient) {
       try {
-        const { error } = await supabaseClient
-          .from('quick_links')
-          .delete()
-          .eq('id', linkId);
+        const { error } = await supabaseClient.rpc('rpc_delete_quick_link', {
+          p_admin_id: state.currentUser ? state.currentUser.id : "",
+          p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
+          p_link_id: linkId
+        });
         if (error) throw error;
         alert("링크가 성공적으로 삭제되었습니다.");
       } catch (err) {
