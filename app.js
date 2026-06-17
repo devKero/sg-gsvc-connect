@@ -2743,7 +2743,7 @@ function renderMembersGrid(resetLimit = false) {
         e.stopPropagation();
         const email = e.currentTarget.getAttribute('data-email');
         navigator.clipboard.writeText(email).then(() => {
-          alert(`이메일 주소(${email})가 클립보드에 복사되었습니다.`);
+          showToast(`이메일 주소(${email})가 복사되었습니다.`);
         });
       });
     });
@@ -2946,7 +2946,7 @@ function openProfileModal(memberId) {
     modalEmailCopyBtn.addEventListener('click', (e) => {
       const email = e.currentTarget.getAttribute('data-email');
       navigator.clipboard.writeText(email).then(() => {
-        alert(`이메일 주소(${email})가 클립보드에 복사되었습니다.`);
+        showToast(`이메일 주소(${email})가 복사되었습니다.`);
       });
     });
   }
@@ -3698,7 +3698,7 @@ async function likePersonalComment(id, memberId) {
   }
 
   if (likedList.includes(id)) {
-    alert("이미 이 방명록 글을 추천하셨습니다.");
+    showToast("이미 이 방명록 글을 추천하셨습니다.", false);
     return;
   }
 
@@ -5832,7 +5832,7 @@ async function handleSendDmSubmit(e) {
         p_message: newMsg.message
       });
       if (error) throw error;
-      alert("쪽지가 정상적으로 전송되었습니다.");
+      showToast("쪽지가 정상적으로 전송되었습니다.");
     } catch (err) {
       console.error("Supabase DM 전송 실패:", err);
       alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 보관됩니다)");
@@ -6218,3 +6218,30 @@ window.addEventListener('resize', () => {
     }
   }
 });
+
+
+// ==================== Toast Notification ====================
+function showToast(message, isSuccess = true) {
+  let toastEl = document.getElementById('gsvcToast');
+  if (!toastEl) {
+    toastEl = document.createElement('div');
+    toastEl.id = 'gsvcToast';
+    toastEl.className = 'toast-container';
+    document.body.appendChild(toastEl);
+  }
+  
+  const iconClass = isSuccess ? 'fa-solid fa-circle-check toast-icon success' : 'fa-solid fa-circle-exclamation toast-icon error';
+  toastEl.innerHTML = `<i class="${iconClass}"></i><span>${message}</span>`;
+  
+  // Force layout reflow to trigger CSS transition
+  toastEl.offsetHeight;
+  toastEl.classList.add('show');
+  
+  if (window.toastTimer) {
+    clearTimeout(window.toastTimer);
+  }
+  
+  window.toastTimer = setTimeout(() => {
+    toastEl.classList.remove('show');
+  }, 2500);
+}
