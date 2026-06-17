@@ -1496,14 +1496,17 @@ html[data-theme="dark"] .list-view .member-card:hover {
 .btn-edit-profile {
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   background-color: transparent;
   color: var(--color-sogang);
   border: 1px solid var(--color-sogang);
-  padding: 0.3rem 0.8rem;
-  border-radius: 12px;
+  padding: 0.18rem 0.5rem;
+  border-radius: 10px;
   cursor: pointer;
   transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .btn-edit-profile:hover {

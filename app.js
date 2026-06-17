@@ -2861,37 +2861,52 @@ function openProfileModal(memberId, fromAdmin = false) {
   document.getElementById('modalClass').innerText = classText;
   
   document.getElementById('modalHeadline').innerText = member.headline;
-  document.getElementById('modalBio').innerText = member.bio || "소개글이 아직 등록되지 않았습니다.";
+  
+  // 소개글 (bio) 바인딩 및 노출 제어
+  const modalBioSection = document.getElementById('modalBioSection');
+  const modalBio = document.getElementById('modalBio');
+  if (member.bio) {
+    modalBio.innerHTML = parseMarkdownToHtml(member.bio);
+    modalBioSection.classList.remove('hidden');
+  } else {
+    modalBio.innerHTML = "";
+    modalBioSection.classList.add('hidden');
+  }
 
-  // 학력/경력 정보 노출 필터링
+  // 학력 정보 노출 제어
   const modalEducationSection = document.getElementById('modalEducationSection');
   const modalEducation = document.getElementById('modalEducation');
   if (member.education) {
-    modalEducation.innerText = member.education;
+    modalEducation.innerHTML = parseMarkdownToHtml(member.education);
     modalEducationSection.classList.remove('hidden');
   } else {
-    modalEducation.innerText = "";
+    modalEducation.innerHTML = "";
     modalEducationSection.classList.add('hidden');
   }
 
+  // 경력 정보 노출 제어
   const modalExperienceSection = document.getElementById('modalExperienceSection');
   const modalExperience = document.getElementById('modalExperience');
   if (member.experience) {
-    modalExperience.innerText = member.experience;
+    modalExperience.innerHTML = parseMarkdownToHtml(member.experience);
     modalExperienceSection.classList.remove('hidden');
   } else {
-    modalExperience.innerText = "";
+    modalExperience.innerHTML = "";
     modalExperienceSection.classList.add('hidden');
   }
 
+  // 프로젝트 정보 노출 제어
+  const modalProjectsSection = document.getElementById('modalProjectsSection');
   const modalProjects = document.getElementById('modalProjects');
   if (member.projects) {
     modalProjects.innerHTML = parseMarkdownToHtml(member.projects);
+    modalProjectsSection.classList.remove('hidden');
   } else {
-    modalProjects.innerHTML = "<p style='color: var(--color-text-dim); font-size: 0.85rem;'>등록된 주요 프로젝트/성과 링크 내역이 없습니다.</p>";
+    modalProjects.innerHTML = "";
+    modalProjectsSection.classList.add('hidden');
   }
 
-  // 자유 기재 영역 (customContent) 바인딩
+  // 자유 기재 영역 (customContent) 바인딩 및 노출 제어
   const modalCustomContent = document.getElementById('modalCustomContent');
   const modalCustomContentSection = document.getElementById('modalCustomContentSection');
   if (member.customContent) {
@@ -2902,8 +2917,16 @@ function openProfileModal(memberId, fromAdmin = false) {
     modalCustomContentSection.classList.add('hidden');
   }
 
+  // 관심 기술 태그 바인딩 및 노출 제어
+  const modalTagsSection = document.getElementById('modalTagsSection');
   const tagsContainer = document.getElementById('modalTagsContainer');
-  tagsContainer.innerHTML = (member.tags || []).map(t => `<span class="card-tag">#${escapeHtml(t)}</span>`).join('');
+  if (member.tags && member.tags.length > 0) {
+    tagsContainer.innerHTML = member.tags.map(t => `<span class="card-tag">#${escapeHtml(t)}</span>`).join('');
+    modalTagsSection.classList.remove('hidden');
+  } else {
+    tagsContainer.innerHTML = "";
+    modalTagsSection.classList.add('hidden');
+  }
 
   const modalEmailRow = document.getElementById('modalEmailRow');
   if (member.email) {
