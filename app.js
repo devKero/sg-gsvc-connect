@@ -514,7 +514,8 @@ async function syncWithSupabase() {
         education: m.education || "",
         experience: m.experience || "",
         role: m.role || "member",
-        deletedAt: m.deleted_at
+        deletedAt: m.deleted_at,
+        createdAt: m.created_at
       };
     });
     localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
@@ -2215,6 +2216,17 @@ function renderAdminDashboard() {
   if (activeCountEl) activeCountEl.innerText = String(activeMembers.length);
   if (pendingCountEl) pendingCountEl.innerText = String(pendingMembers.length);
   if (trashCountEl) trashCountEl.innerText = String(trashMembers.length);
+
+  // 대시보드 상단 탭 뱃지 개수 업데이트 (빠른 링크 및 문의사항 동기화)
+  const inqCountEl = document.getElementById('adminInquiryCount');
+  if (inqCountEl) {
+    const activeInqs = state.inquiries.filter(i => i.status !== 'deleted');
+    inqCountEl.innerText = String(activeInqs.length);
+  }
+  const quickLinksCountEl = document.getElementById('adminQuickLinksCount');
+  if (quickLinksCountEl) {
+    quickLinksCountEl.innerText = String(state.quickLinks.length);
+  }
 
   // 운영 기수 필터 드롭다운 동적 갱신 (선택 상태 보존, 활성 회원 기준)
   const adminGenSelect = document.getElementById('adminGenFilter');
@@ -4288,26 +4300,81 @@ function updateNotifications() {
   // 내 카드 ID
   const myId = state.currentUser.id;
   
-  // 전체 방명록 중 내 카드에 달린 글 필터링 (내가 직접 내 카드에 쓴 글은 제외하여 노이즈 방지)
+  // 1. 내 방명록 알림 수집 (내가 직접 내 카드에 쓴 글은 제외)
   const myNotifs = state.guestbook.filter(log => 
     log.targetMemberId === myId && 
     log.author !== state.currentUser.name
-  );
+  ).map(log => ({
+    type: 'comment',
+    id: log.id,
+    author: log.author,
+    message: log.message,
+    isPrivate: log.isPrivate,
+    timestamp: log.timestamp
+  }));
   
+  // 2. 어드민 운영 알림 수집 (신규 문의 & 가입 승인 대기)
+  let adminNotifs = [];
+  if (state.isAdmin) {
+    // 승인 대기 중인 회원들
+    const pendingMembers = state.members.filter(m => m.role === 'pending');
+    pendingMembers.forEach(m => {
+      let ts = '1970-01-01 00:00:00';
+      if (m.createdAt) {
+        const d = new Date(m.createdAt);
+        if (!isNaN(d.getTime())) {
+          ts = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        }
+      }
+      adminNotifs.push({
+        type: 'signup',
+        id: m.id,
+        author: m.name,
+        studentId: m.studentId,
+        timestamp: ts
+      });
+    });
+
+    // 답변이 없고 삭제되지 않은 문의사항
+    const pendingInquiries = state.inquiries.filter(i => i.status === 'pending' && !i.reply);
+    pendingInquiries.forEach(i => {
+      let ts = '1970-01-01 00:00:00';
+      if (i.createdAt) {
+        const d = new Date(i.createdAt);
+        if (!isNaN(d.getTime())) {
+          ts = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        }
+      }
+      adminNotifs.push({
+        type: 'inquiry',
+        id: i.id,
+        author: i.author || '알 수 없음',
+        title: i.title || '제목 없음',
+        message: i.message,
+        timestamp: ts
+      });
+    });
+  }
+
+  // 알림 목록 합치기
+  const allNotifs = [...myNotifs, ...adminNotifs];
+
   // 마지막으로 알림창을 열어 읽은 시각 타임스탬프 로드
   const lastReadTime = localStorage.getItem('sogang_unity_last_notif_read') || '1970-01-01 00:00:00';
-  
+
   let unreadCount = 0;
-  state.notifications = myNotifs.map(log => {
-    // 타임스탬프 비교로 읽음/안읽음 판단
-    const isUnread = log.timestamp > lastReadTime;
+  state.notifications = allNotifs.map(notif => {
+    const isUnread = notif.timestamp > lastReadTime;
     if (isUnread) unreadCount++;
     return {
-      ...log,
+      ...notif,
       isUnread
     };
-  }).reverse(); // 최신 댓글 순서
-  
+  });
+
+  // 정렬: 최신 알림이 맨 위로 오게 정렬 (timestamp 기준 내림차순)
+  state.notifications.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
   state.unreadNotifCount = unreadCount;
   
   // 1. 배지 렌더링
@@ -4329,7 +4396,7 @@ function updateNotifications() {
     notifList.innerHTML = `
       <div class="notif-empty">
         <i class="fa-regular fa-bell-slash"></i>
-        <p>아직 수신된 댓글 알림이 없습니다.</p>
+        <p>아직 수신된 알림이 없습니다.</p>
       </div>
     `;
     return;
@@ -4339,28 +4406,58 @@ function updateNotifications() {
     const item = document.createElement('div');
     item.className = `notif-item ${notif.isUnread ? 'unread' : ''}`;
     
-    let previewText = notif.isPrivate ? '🔒 비공개 방명록을 남겼습니다.' : notif.message;
-    if (previewText.length > 35) {
-      previewText = previewText.substring(0, 35) + '...';
+    if (notif.type === 'comment') {
+      let previewText = notif.isPrivate ? '🔒 비공개 방명록을 남겼습니다.' : notif.message;
+      if (previewText.length > 35) {
+        previewText = previewText.substring(0, 35) + '...';
+      }
+      item.innerHTML = `
+        <div class="notif-item-body">
+          <strong>${escapeHtml(notif.author)}</strong> 님이 나에게 방명록을 남겼습니다:
+          <span style="color: var(--color-text-sub); display: block; margin-top: 0.15rem; font-style: ${notif.isPrivate ? 'italic' : 'normal'};">${escapeHtml(previewText)}</span>
+        </div>
+        <div class="notif-item-time">${notif.timestamp}</div>
+      `;
+      item.addEventListener('click', () => {
+        const popover = document.getElementById('notifPopover');
+        if (popover) popover.classList.add('hidden');
+        openProfileModal(myId);
+      });
+    } else if (notif.type === 'inquiry') {
+      let previewText = notif.message || "";
+      if (previewText.length > 35) {
+        previewText = previewText.substring(0, 35) + '...';
+      }
+      item.innerHTML = `
+        <div class="notif-item-body" style="border-left: 3px solid var(--color-sogang); padding-left: 8px;">
+          <strong style="color: var(--color-sogang);">[신규 문의]</strong> <strong>${escapeHtml(notif.author)}</strong> 님의 건의/문의사항:
+          <span style="color: var(--color-text-main); font-weight: 600; display: block; margin-top: 0.1rem;">${escapeHtml(notif.title)}</span>
+          <span style="color: var(--color-text-sub); display: block; margin-top: 0.15rem; font-size: 0.75rem;">${escapeHtml(previewText)}</span>
+        </div>
+        <div class="notif-item-time">${notif.timestamp}</div>
+      `;
+      item.addEventListener('click', () => {
+        const popover = document.getElementById('notifPopover');
+        if (popover) popover.classList.add('hidden');
+        switchToAdminDashboard();
+        switchAdminActiveTab('inquiries');
+      });
+    } else if (notif.type === 'signup') {
+      item.innerHTML = `
+        <div class="notif-item-body" style="border-left: 3px solid var(--color-sogang-gold); padding-left: 8px;">
+          <strong style="color: var(--color-sogang-gold);">[가입 신청]</strong> <strong>${escapeHtml(notif.author)}</strong> 원우 (${escapeHtml(notif.studentId)})의 승인 대기 건
+          <span style="color: var(--color-text-sub); display: block; margin-top: 0.15rem; font-size: 0.75rem;">운영관리 대시보드에서 승인할 수 있습니다.</span>
+        </div>
+        <div class="notif-item-time">${notif.timestamp}</div>
+      `;
+      item.addEventListener('click', () => {
+        const popover = document.getElementById('notifPopover');
+        if (popover) popover.classList.add('hidden');
+        switchToAdminDashboard();
+        switchAdminActiveTab('members');
+        switchAdminMemberSubTab('pending');
+      });
     }
-    
-    item.innerHTML = `
-      <div class="notif-item-body">
-        <strong>${escapeHtml(notif.author)}</strong> 님이 나에게 방명록을 남겼습니다:
-        <span style="color: var(--color-text-sub); display: block; margin-top: 0.15rem; font-style: ${notif.isPrivate ? 'italic' : 'normal'};">${escapeHtml(previewText)}</span>
-      </div>
-      <div class="notif-item-time">${notif.timestamp}</div>
-    `;
-    
-    // 알림 아이템 클릭 시
-    item.addEventListener('click', () => {
-      // 드롭다운 닫기
-      const popover = document.getElementById('notifPopover');
-      if (popover) popover.classList.add('hidden');
-      
-      // 내 프로필 모달 오픈
-      openProfileModal(myId);
-    });
     
     notifList.appendChild(item);
   });
@@ -6230,8 +6327,26 @@ async function pollNewMessages() {
       // 2. 쪽지함이 닫혀 있는 경우 백그라운드에서 안 읽은 개수를 확인하여 우측 상단 뱃지만 갱신
       await updateDmUnreadCount();
     }
+
+    // [운영진 추가 실시간 백그라운드 동기화 및 렌더링]
+    if (state.isAdmin) {
+      await syncInquiries();
+      
+      const adminView = document.getElementById('adminDashboardView');
+      if (adminView && !adminView.classList.contains('hidden')) {
+        renderAdminDashboard();
+        
+        const secInquiries = document.getElementById('adminInquirySection');
+        if (secInquiries && !secInquiries.classList.contains('hidden')) {
+          renderAdminInquiries();
+        }
+      }
+    }
+
+    // 실시간 알림 센터 동기화
+    updateNotifications();
   } catch (err) {
-    console.error("신규 쪽지 폴링 실패:", err);
+    console.error("신규 데이터 폴링 실패:", err);
   }
 }
 
