@@ -10,6 +10,10 @@
 -- -------------------------------------------------------------------------
 -- 1. 모든 테이블 RLS 활성화 및 정책 초기화
 -- -------------------------------------------------------------------------
+-- 0. 누락된 컬럼 마이그레이션 (deleted_at 추가)
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS deleted_at timestamp with time zone;
+ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS deleted_at timestamp with time zone;
+
 ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
@@ -606,7 +610,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.rpc_delete_guestbook(
     p_request_id text,
     p_password_hash text,
-    p_comment_id bigint
+    p_comment_id uuid
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -649,7 +653,7 @@ $$;
 
 -- ③ 방명록 좋아요 증가 (비밀번호 검증 미필요)
 CREATE OR REPLACE FUNCTION public.rpc_like_guestbook(
-    p_comment_id bigint
+    p_comment_id uuid
 )
 RETURNS void
 LANGUAGE plpgsql
