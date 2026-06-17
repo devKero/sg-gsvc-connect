@@ -7,6 +7,18 @@
 -- Supabase SQL Editor에서 이 스크립트 전체를 실행하시면 됩니다.
 -- =========================================================================
 
+-- =========================================================================
+-- 0. 기존 데이터 초기화 및 ID 시퀀스 설정 (정식 오픈 전 청소)
+-- =========================================================================
+TRUNCATE TABLE public.messages CASCADE;
+TRUNCATE TABLE public.inquiries CASCADE;
+TRUNCATE TABLE public.guestbook CASCADE;
+TRUNCATE TABLE public.members CASCADE;
+TRUNCATE TABLE public.quick_links CASCADE;
+
+DROP SEQUENCE IF EXISTS public.members_id_seq;
+CREATE SEQUENCE public.members_id_seq START WITH 1;
+
 -- -------------------------------------------------------------------------
 -- 1. 모든 테이블 RLS 활성화 및 정책 초기화
 -- -------------------------------------------------------------------------
@@ -168,10 +180,12 @@ CREATE OR REPLACE FUNCTION public.rpc_insert_member(
     p_admin_password_hash text,
     p_new_member jsonb
 )
-RETURNS void
+RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+    v_member_id text;
 BEGIN
     -- 운영진 권한 2차 검증
     IF NOT EXISTS (
@@ -181,6 +195,9 @@ BEGIN
         RAISE EXCEPTION '권한 거부: 운영진이 아니거나 비밀번호가 틀려 멤버를 추가할 수 없습니다.';
     END IF;
 
+    -- 시퀀스를 이용한 고유 순차 ID 발급
+    v_member_id := 'member_' || nextval('public.members_id_seq');
+
     -- 신규 멤버 삽입
     INSERT INTO public.members (
         id, student_id, password, name, class_year, generation, 
@@ -188,7 +205,7 @@ BEGIN
         custom_content, avatar_image, degree_process, academic_status, 
         education, experience, role
     ) VALUES (
-        p_new_member->>'id',
+        v_member_id,
         p_new_member->>'studentId',
         p_new_member->>'password',
         p_new_member->>'name',
@@ -208,6 +225,8 @@ BEGIN
         COALESCE(p_new_member->>'experience', ''),
         COALESCE(p_new_member->>'role', 'member')
     );
+
+    RETURN v_member_id;
 END;
 $$;
 
@@ -711,15 +730,20 @@ $$;
 CREATE OR REPLACE FUNCTION public.rpc_request_signup(
     p_new_member jsonb
 )
-RETURNS void
+RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+    v_member_id text;
 BEGIN
     -- 학번 중복 검증
     IF EXISTS (SELECT 1 FROM public.members WHERE student_id = p_new_member->>'studentId') THEN
         RAISE EXCEPTION '이미 등록되었거나 신청 중인 학번입니다.';
     END IF;
+
+    -- 시퀀스를 이용한 고유 순차 ID 발급
+    v_member_id := 'member_' || nextval('public.members_id_seq');
 
     -- 신규 멤버 삽입
     INSERT INTO public.members (
@@ -728,7 +752,7 @@ BEGIN
         custom_content, avatar_image, degree_process, academic_status, 
         education, experience, role
     ) VALUES (
-        p_new_member->>'id',
+        v_member_id,
         p_new_member->>'studentId',
         p_new_member->>'password',
         p_new_member->>'name',
@@ -749,6 +773,8 @@ BEGIN
         COALESCE(p_new_member->>'experience', ''),
         'pending'  -- role 강제 고정
     );
+
+    RETURN v_member_id;
 END;
 $$;
 

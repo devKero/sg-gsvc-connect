@@ -1709,7 +1709,7 @@ async function handleSignupSubmit(e) {
 
   if (supabaseClient) {
     try {
-      const { error } = await supabaseClient.rpc('rpc_request_signup', {
+      const { data, error } = await supabaseClient.rpc('rpc_request_signup', {
         p_new_member: {
           id: newMember.id,
           studentId: newMember.studentId,
@@ -1734,6 +1734,9 @@ async function handleSignupSubmit(e) {
       });
 
       if (error) throw error;
+      if (data) {
+        newMember.id = data;
+      }
     } catch (err) {
       console.error("Supabase 가입 신청 저장 실패:", err);
       alert("가입 신청 저장 중 오류가 발생했습니다. 학번 중복 여부를 확인하거나 운영진에게 문의해 주세요.");
@@ -3315,7 +3318,7 @@ async function handleAddMemberSubmit(e) {
   const isSupabaseActive = supabaseClient !== null;
   if (isSupabaseActive) {
     try {
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .rpc('rpc_insert_member', {
           p_admin_id: state.currentUser ? state.currentUser.id : "",
           p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
@@ -3343,6 +3346,10 @@ async function handleAddMemberSubmit(e) {
         });
 
       if (error) throw error;
+      if (data) {
+        newMember.id = data;
+        localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
+      }
     } catch (err) {
       console.error("Supabase 멤버 추가 에러:", err);
       alert("클라우드 서버 동기화 실패 (로컬 스토리지에만 저장됩니다)");
@@ -4128,7 +4135,7 @@ async function submitExcelData() {
       // 1. 신규 멤버 bulk insert ➔ RPC 루프 호출로 보안 삽입
       if (toInsertList.length > 0) {
         for (const m of toInsertList) {
-          const { error } = await supabaseClient.rpc('rpc_insert_member', {
+          const { data, error } = await supabaseClient.rpc('rpc_insert_member', {
             p_admin_id: state.currentUser ? state.currentUser.id : "",
             p_admin_password_hash: state.currentUser ? state.currentUser.passwordHash : "",
             p_new_member: {
@@ -4154,7 +4161,11 @@ async function submitExcelData() {
             }
           });
           if (error) throw error;
+          if (data) {
+            m.id = data;
+          }
         }
+        localStorage.setItem('sogang_unity_members', JSON.stringify(state.members));
       }
 
       // 2. 덮어쓴 멤버 개별/벌크 update ➔ RPC 루프 호출로 보안 업데이트
