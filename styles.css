@@ -1436,14 +1436,21 @@ html[data-theme="dark"] .list-view .member-card:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .name-edit-row h2 {
   font-size: 1.40rem;
   font-weight: 700;
   color: var(--color-text-main);
-  flex: 1;
+}
+
+.modal-action-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: -0.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .btn-edit-profile {
@@ -1822,6 +1829,12 @@ html[data-theme="dark"] .list-view .member-card:hover {
     align-items: center;
     justify-content: center;
     width: 100%;
+  }
+
+  .modal-action-bar {
+    justify-content: center;
+    margin-top: -0.5rem;
+    margin-bottom: 1rem;
   }
 
   .modal-contact-row {
