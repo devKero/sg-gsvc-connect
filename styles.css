@@ -2769,6 +2769,21 @@ html[data-theme="dark"] .list-view .member-card:hover {
 .mini-avatar, 
 .user-avatar {
   overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* 프로필 사진 테두리 연출을 위한 기수 색상 배경 테두리 패딩 설정 */
+.card-avatar {
+  padding: 3px !important;
+}
+
+.modal-avatar {
+  padding: 4.5px !important;
+}
+
+.mini-avatar, 
+.user-avatar {
+  padding: 2px !important;
 }
 
 .card-avatar img, 
@@ -2779,6 +2794,7 @@ html[data-theme="dark"] .list-view .member-card:hover {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 50% !important; /* 이미지를 자체적으로 원형으로 잘라 기수 색상 테두리 연출 */
 }
 
 /* ==================== 관리자용 전공 관리 모달 & 학력/경력 스타일 ==================== */

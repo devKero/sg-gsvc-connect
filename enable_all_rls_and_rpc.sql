@@ -28,6 +28,7 @@ CREATE SEQUENCE IF NOT EXISTS public.members_id_seq START WITH 1;
 -- 0. 누락된 컬럼 마이그레이션 (deleted_at 추가)
 ALTER TABLE public.members ADD COLUMN IF NOT EXISTS deleted_at timestamp with time zone;
 ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS deleted_at timestamp with time zone;
+ALTER TABLE public.members DROP COLUMN IF EXISTS avatar_color;
 
 ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -208,7 +209,7 @@ BEGIN
     -- 신규 멤버 삽입
     INSERT INTO public.members (
         id, student_id, password, name, class_year, generation, 
-        headline, avatar_color, sns_links, tags, bio, projects, 
+        headline, sns_links, tags, bio, projects, 
         custom_content, avatar_image, degree_process, academic_status, 
         education, experience, role
     ) VALUES (
@@ -219,7 +220,6 @@ BEGIN
         p_new_member->>'classYear',
         (p_new_member->>'generation')::integer,
         COALESCE(p_new_member->>'headline', '서강대 가상융합전문대학원 원우'),
-        COALESCE(p_new_member->>'avatarColor', '#7f8c8d'),
         COALESCE(p_new_member->'snsLinks', '[]'::jsonb),
         COALESCE(ARRAY(SELECT jsonb_array_elements_text(p_new_member->'tags')), '{}'::text[]),
         COALESCE(p_new_member->>'bio', ''),
@@ -755,7 +755,7 @@ BEGIN
     -- 신규 멤버 삽입
     INSERT INTO public.members (
         id, student_id, password, name, email, class_year, generation, 
-        headline, avatar_color, sns_links, tags, bio, projects, 
+        headline, sns_links, tags, bio, projects, 
         custom_content, avatar_image, degree_process, academic_status, 
         education, experience, role
     ) VALUES (
@@ -767,7 +767,6 @@ BEGIN
         p_new_member->>'classYear',
         (p_new_member->>'generation')::integer,
         '운영진 승인 대기 중인 가입 신청입니다.', -- 가입신청 기본 헤드라인
-        COALESCE(p_new_member->>'avatarColor', '#7f8c8d'),
         COALESCE(p_new_member->'snsLinks', '[]'::jsonb),
         COALESCE(ARRAY(SELECT jsonb_array_elements_text(p_new_member->'tags')), '{}'::text[]),
         COALESCE(p_new_member->>'bio', ''),

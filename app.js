@@ -69,20 +69,7 @@ let state = {
   alertedMessageIds: null       // 이미 확인/알림 띄운 쪽지 ID 목록
 };
 
-const AVATAR_COLORS = [
-  "#B60005", // 서강 스칼렛 크림슨
-  "#1d2d44", // 딥 네이비
-  "#C5A059", // 서강 골드
-  "#2a9d8f", // 틸 그린
-  "#7209b7", // 로얄 퍼플
-  "#f72585", // 로즈 핑크
-  "#4361ee"  // 콘플라워 블루
-];
 
-// 무작위 아바타 색상 추출
-function getRandomAvatarColor() {
-  return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
-}
 
 const GEN_COLORS = [
   "#B60005", // 서강 크림슨
@@ -516,7 +503,6 @@ async function syncWithSupabase() {
         classYear: m.class_year,
         generation: m.generation,
         headline: m.headline,
-        avatarColor: m.avatar_color,
         snsLinks: snsLinks,
         tags: m.tags || [],
         bio: m.bio,
@@ -1693,7 +1679,6 @@ async function handleSignupSubmit(e) {
     classYear,
     generation,
     headline: "운영진 승인 대기 중인 가입 신청입니다.",
-    avatarColor: getRandomAvatarColor(),
     snsLinks: [],
     tags: [],
     bio: "",
@@ -1719,7 +1704,6 @@ async function handleSignupSubmit(e) {
           classYear: newMember.classYear,
           generation: newMember.generation,
           headline: newMember.headline,
-          avatarColor: newMember.avatarColor,
           snsLinks: newMember.snsLinks,
           tags: newMember.tags,
           bio: newMember.bio,
@@ -3286,7 +3270,6 @@ async function handleAddMemberSubmit(e) {
     classYear,
     generation,
     headline,
-    avatarColor: getRandomAvatarColor(),
     snsLinks: finalSnsLinks,
     tags,
     bio,
@@ -3330,7 +3313,6 @@ async function handleAddMemberSubmit(e) {
             classYear: newMember.classYear,
             generation: newMember.generation,
             headline: newMember.headline,
-            avatarColor: newMember.avatarColor,
             snsLinks: newMember.snsLinks,
             tags: newMember.tags,
             bio: newMember.bio,
@@ -4105,7 +4087,6 @@ async function submitExcelData() {
         classYear: row.classYear,
         generation: row.generation,
         headline: row.headline || "서강대 가상융합전문대학원 원우",
-        avatarColor: getRandomAvatarColor(),
         snsLinks: [],
         tags: [],
         bio: "",
@@ -4146,7 +4127,6 @@ async function submitExcelData() {
               classYear: m.classYear,
               generation: m.generation,
               headline: m.headline,
-              avatarColor: m.avatarColor,
               snsLinks: m.snsLinks,
               tags: m.tags,
               bio: m.bio,
