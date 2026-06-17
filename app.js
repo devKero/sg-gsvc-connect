@@ -2951,11 +2951,11 @@ function openProfileModal(memberId, fromAdmin = false) {
     });
   }
 
-  // 2. 편집 권한 체크 (자기 자신의 프로필인 경우 또는 관리자인 경우에만 수정 버튼을 노출합니다)
+  // 2. 편집 권한 체크 (자기 자신의 프로필인 경우에만 수정 버튼 노출 / 운영진은 운영관리 탭을 통해 수정)
   const editBtn = document.getElementById('editProfileBtn');
   if (editBtn) {
     const isSelf = state.currentUser && state.currentUser.id === member.id;
-    if (isSelf || state.isAdmin) {
+    if (isSelf) {
       editBtn.classList.remove('hidden');
     } else {
       editBtn.classList.add('hidden');
