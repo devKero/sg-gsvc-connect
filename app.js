@@ -2865,13 +2865,8 @@ function openProfileModal(memberId, fromAdmin = false) {
   // 소개글 (bio) 바인딩 및 노출 제어
   const modalBioSection = document.getElementById('modalBioSection');
   const modalBio = document.getElementById('modalBio');
-  if (member.bio) {
-    modalBio.innerHTML = parseMarkdownToHtml(member.bio);
-    modalBioSection.classList.remove('hidden');
-  } else {
-    modalBio.innerHTML = "";
-    modalBioSection.classList.add('hidden');
-  }
+  modalBio.innerHTML = parseMarkdownToHtml(member.bio || "소개글이 아직 등록되지 않았습니다.");
+  if (modalBioSection) modalBioSection.classList.remove('hidden');
 
   // 학력 정보 노출 제어
   const modalEducationSection = document.getElementById('modalEducationSection');
@@ -2900,11 +2895,10 @@ function openProfileModal(memberId, fromAdmin = false) {
   const modalProjects = document.getElementById('modalProjects');
   if (member.projects) {
     modalProjects.innerHTML = parseMarkdownToHtml(member.projects);
-    modalProjectsSection.classList.remove('hidden');
   } else {
-    modalProjects.innerHTML = "";
-    modalProjectsSection.classList.add('hidden');
+    modalProjects.innerHTML = "<p style='color: var(--color-text-dim); font-size: 0.85rem;'>등록된 주요 프로젝트/성과 링크 내역이 없습니다.</p>";
   }
+  if (modalProjectsSection) modalProjectsSection.classList.remove('hidden');
 
   // 자유 기재 영역 (customContent) 바인딩 및 노출 제어
   const modalCustomContent = document.getElementById('modalCustomContent');
@@ -2920,6 +2914,8 @@ function openProfileModal(memberId, fromAdmin = false) {
   // 관심 기술 태그 바인딩 및 노출 제어
   const modalTagsSection = document.getElementById('modalTagsSection');
   const tagsContainer = document.getElementById('modalTagsContainer');
+  if (modalTagsSection) modalTagsSection.classList.remove('hidden');
+
   if (member.tags && member.tags.length > 0) {
     const maxVisibleTags = 8;
     const hasMore = member.tags.length > maxVisibleTags;
@@ -2938,7 +2934,6 @@ function openProfileModal(memberId, fromAdmin = false) {
     }
     
     tagsContainer.innerHTML = tagsHtml;
-    modalTagsSection.classList.remove('hidden');
 
     if (hasMore) {
       const btnToggle = document.getElementById('btnToggleAllTags');
@@ -2965,8 +2960,7 @@ function openProfileModal(memberId, fromAdmin = false) {
       }
     }
   } else {
-    tagsContainer.innerHTML = "";
-    modalTagsSection.classList.add('hidden');
+    tagsContainer.innerHTML = "<p style='color: var(--color-text-dim); font-size: 0.85rem;'>등록된 키워드 태그가 없습니다.</p>";
   }
 
   const modalEmailRow = document.getElementById('modalEmailRow');

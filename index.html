@@ -471,7 +471,7 @@
           </div>
 
           <div class="modal-body-sections">
-            <div class="modal-section hidden" id="modalBioSection">
+            <div class="modal-section" id="modalBioSection">
               <h4>소개 & 기본 정보</h4>
               <p id="modalBio" class="section-text">자기소개 내용이 들어갑니다.</p>
             </div>
@@ -486,7 +486,7 @@
               <p id="modalExperience" class="section-text" style="white-space: pre-wrap;"></p>
             </div>
             
-            <div class="modal-section hidden" id="modalProjectsSection">
+            <div class="modal-section" id="modalProjectsSection">
               <h4>대표 프로젝트 및 성과</h4>
               <p id="modalProjects" class="section-text project-list">프로젝트 목록이 들어갑니다.</p>
             </div>
@@ -497,7 +497,7 @@
               <p id="modalCustomContent" class="section-text" style="font-size: 0.82rem;"></p>
             </div>
 
-            <div class="modal-section hidden" id="modalTagsSection">
+            <div class="modal-section" id="modalTagsSection">
               <h4>관심 기술 태그</h4>
               <div class="modal-tags" id="modalTagsContainer">
                 <!-- 태그 리스트 -->
@@ -544,6 +544,23 @@
           <div style="display: flex; gap: 0.55rem; align-items: flex-start; background: rgba(179,8,56,0.06); border: 1px solid rgba(179,8,56,0.18); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.78rem; color: var(--color-text-sub); line-height: 1.55;">
             <i class="fa-solid fa-shield-halved" style="color: var(--color-sogang); margin-top: 0.1rem; flex-shrink: 0;"></i>
             <span>프로필에 입력된 정보는 <strong style="color: var(--color-text-main);">서강 GSVC Connect에 가입된 원우 전원에게 공개</strong>됩니다. 전화번호, 주민등록번호 등 <strong style="color: var(--color-sogang);">민감한 개인정보는 절대 기입하지 마세요.</strong> 이메일·SNS 등 연락처는 선택 사항이며, 공개를 원치 않는 항목은 비워두시면 됩니다.</span>
+          </div>
+
+          <!-- 작성 마크다운 가이드 배너 -->
+          <div style="display: flex; gap: 0.55rem; align-items: flex-start; background: var(--color-bg-input); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.76rem; color: var(--color-text-sub); line-height: 1.55;">
+            <i class="fa-solid fa-circle-info" style="color: var(--color-sogang-gold); margin-top: 0.1rem; flex-shrink: 0;"></i>
+            <div style="flex: 1;">
+              <span style="font-weight: 700; color: var(--color-text-main); display: block; margin-bottom: 0.25rem;">💡 프로필 작성 팁 (마크다운 양식 지원)</span>
+              소개글, 대표 프로젝트, 자유 포트폴리오 등의 작성란에 아래 문법을 사용해 깔끔하게 꾸밀 수 있습니다.
+              <ul style="margin: 0.35rem 0 0; padding-left: 1.1rem; list-style-type: disc; display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem 0.6rem;">
+                <li><strong># 대제목</strong>, <strong>## 중제목</strong></li>
+                <li><strong>### 소제목</strong></li>
+                <li><strong>- 리스트 항목</strong> (또는 <strong>*</strong>, <strong>•</strong>)</li>
+                <li><strong>**굵은 글씨**</strong></li>
+                <li><strong>&gt; 인용구 내용</strong></li>
+                <li>줄바꿈은 편하게 <strong>Enter</strong> 입력</li>
+              </ul>
+            </div>
           </div>
 
           <form id="profileEditForm" class="edit-form">
