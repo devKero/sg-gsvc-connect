@@ -1532,7 +1532,7 @@ function setupEventListeners() {
     
     dmReceiverSearchInput.addEventListener('input', (e) => {
       const currentVal = e.target.value;
-      const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted' && m.role !== 'pending');
+      const activeMembers = state.members.filter(m => m.generation && m.id !== state.currentUser.id && m.role !== 'deleted' && m.role !== 'pending');
       const exactMatch = activeMembers.find(m => `${m.generation ? `${m.generation}기 ` : ''}${m.name} (${m.studentId})` === currentVal);
       if (exactMatch) {
         document.getElementById('dmReceiverSelect').value = exactMatch.id;
@@ -2217,7 +2217,7 @@ function switchToAdminDashboard() {
 function renderAdminDashboard() {
   if (!state.isAdmin) return;
 
-  const nonAdminMembers = state.members.filter(m => m.id !== 'admin');
+  const nonAdminMembers = state.members.filter(m => m.generation);
   
   // 활성 회원, 승인 대기, 휴지통 회원 분리
   const activeMembers = nonAdminMembers.filter(m => m.role !== 'deleted' && m.role !== 'pending');
@@ -2527,7 +2527,7 @@ function renderFilterSelectorsOptions() {
     genSelect.innerHTML = '<option value="">전체 기수</option>';
 
     const gens = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending' && m.generation)
+      .filter(m => m.role !== 'deleted' && m.role !== 'pending' && m.generation)
       .map(m => m.generation)
     )].sort((a, b) => a - b);
 
@@ -2547,7 +2547,7 @@ function renderFilterSelectorsOptions() {
     majorSelect.innerHTML = '<option value="">전체 전공</option>';
 
     const majors = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending' && m.classYear)
+      .filter(m => m.generation && m.role !== 'deleted' && m.role !== 'pending' && m.classYear)
       .map(m => m.classYear)
     )].sort();
 
@@ -2567,7 +2567,7 @@ function renderFilterSelectorsOptions() {
     degreeSelect.innerHTML = '<option value="">전체 과정</option>';
 
     const degrees = [...new Set(state.members
-      .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending' && m.degreeProcess)
+      .filter(m => m.generation && m.role !== 'deleted' && m.role !== 'pending' && m.degreeProcess)
       .map(m => m.degreeProcess)
     )].sort();
 
@@ -2592,11 +2592,9 @@ function renderMembersGrid(resetLimit = false) {
 
   // 필터링 적용
   const filtered = state.members.filter(member => {
-    if (member.id === 'admin' || member.id === 'pid_admin') return false;
-    if (member.studentId === 'admin') return false;
+    if (!member.generation) return false; // 기수가 없는 계정(최고 관리자 등)은 디렉토리에 미표시
     if (member.role === 'deleted') return false;
     if (member.role === 'pending') return false;
-    if (member.role === 'super_admin') return false;
 
     // 1. 검색어 필터링 (이름, 헤드라인, 태그, 소개글, 자유 기재 내용, SNS 링크)
     const matchesSearch = 
@@ -2781,7 +2779,7 @@ function renderFilterTags() {
 
   const allTagsMap = {};
   state.members
-    .filter(m => m.id !== 'admin' && m.role !== 'deleted' && m.role !== 'pending')
+    .filter(m => m.generation && m.role !== 'deleted' && m.role !== 'pending')
     .filter(member => {
       if (state.selectedGeneration && String(member.generation) !== state.selectedGeneration) {
         return false;
@@ -5396,7 +5394,7 @@ function renderDmInbox() {
       if (partner) {
         chatPartnerName.innerText = `${partner.generation ? `${partner.generation}기 ` : ''}${partner.name} 원우`;
       } else {
-        chatPartnerName.innerText = state.activeDmOpponentId === 'admin' ? '운영진' : '알 수 없는 원우';
+        chatPartnerName.innerText = (state.activeDmOpponentId === 'admin' || state.activeDmOpponentId === 'pid_admin') ? '운영진' : '알 수 없는 원우';
       }
     }
     
@@ -5642,7 +5640,7 @@ async function handleSendDmReply() {
 
   const opponentId = state.activeDmOpponentId;
   const receiver = state.members.find(m => m.id === opponentId);
-  const receiverName = receiver ? receiver.name : (opponentId === 'admin' ? '운영진' : '알 수 없는 원우');
+  const receiverName = receiver ? receiver.name : ((opponentId === 'admin' || opponentId === 'pid_admin') ? '운영진' : '알 수 없는 원우');
 
   const now = new Date();
   const nowStr = now.toISOString();
@@ -5698,7 +5696,7 @@ async function handleLeaveChat() {
 
   const opponentId = state.activeDmOpponentId;
   const partner = state.members.find(m => m.id === opponentId);
-  const partnerName = partner ? partner.name : (opponentId === 'admin' ? '운영진' : '알 수 없는 원우');
+  const partnerName = partner ? partner.name : ((opponentId === 'admin' || opponentId === 'pid_admin') ? '운영진' : '알 수 없는 원우');
 
   const confirmMsg = `[${partnerName}] 원우님과의 대화방을 나가시겠습니까?\n나가기 시 이전 대화 내역이 모두 삭제(숨김)되며, 상대방이 새 쪽지를 보내면 대화가 다시 시작됩니다.`;
 
@@ -5795,7 +5793,7 @@ function renderReceiverDropdown(filterText = "") {
   if (!listContainer) return;
   listContainer.innerHTML = "";
 
-  const activeMembers = state.members.filter(m => m.id !== 'admin' && m.id !== state.currentUser.id && m.role !== 'deleted' && m.role !== 'pending');
+  const activeMembers = state.members.filter(m => m.generation && m.id !== state.currentUser.id && m.role !== 'deleted' && m.role !== 'pending');
   activeMembers.sort((a, b) => {
     const genA = a.generation || 999;
     const genB = b.generation || 999;
