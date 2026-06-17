@@ -2436,7 +2436,7 @@ function renderAdminDashboard() {
     } else {
       // 2) 편집 버튼 이벤트
       tr.querySelector('.admin-edit-btn').addEventListener('click', () => {
-        openProfileModal(member.id);
+        openProfileModal(member.id, true);
         enableEditMode();
       });
 
@@ -2826,7 +2826,7 @@ function renderFilterTags() {
 }
 
 // ==================== 모달 상세 뷰 및 편집 제어 ====================
-function openProfileModal(memberId) {
+function openProfileModal(memberId, fromAdmin = false) {
   state.selectedMemberId = memberId;
   const member = state.members.find(m => m.id === memberId);
   if (!member) return;
@@ -2841,10 +2841,10 @@ function openProfileModal(memberId) {
     }
   }
 
-  // 운영진 여부에 따라 기본 학적 정보 수정 필드 노출 토글
+  // 운영진 전용 기본 학적 정보 수정 필드 - 어드민 대시보드 편집 버튼으로 열었을 때만 노출
   const adminFieldsEl = document.getElementById('editAdminOnlyFields');
   if (adminFieldsEl) {
-    if (state.isAdmin) {
+    if (state.isAdmin && fromAdmin) {
       adminFieldsEl.classList.remove('hidden');
     } else {
       adminFieldsEl.classList.add('hidden');
