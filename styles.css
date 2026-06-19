@@ -4681,9 +4681,12 @@ html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16,
   color: #e74c3c; /* red error */
 }
 
-/* ==================== 문의 관리 테이블 반응형 대응 ==================== */
+/* ==================== 문의 관리 테이블 반응형 대응 및 모바일 광고 숨김 ==================== */
 @media (max-width: 768px) {
   .table-col-student-id, .table-col-date {
+    display: none !important;
+  }
+  .ad-card {
     display: none !important;
   }
 }
