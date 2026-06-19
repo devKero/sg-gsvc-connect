@@ -2282,23 +2282,35 @@ html[data-theme="dark"] .list-view .member-card:hover {
 
   .grid-view .card-name-row {
     justify-content: center;
+    width: 100%;
+    overflow: hidden;
   }
 
   .grid-view .card-name {
     font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .grid-view .card-class {
     font-size: 0.68rem;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
   }
 
   .grid-view .card-headline {
     font-size: 0.72rem;
-    height: 1.4em;
-    -webkit-line-clamp: 1;
     margin-top: 0.15rem;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
   }
 
   .grid-view .card-tags {
