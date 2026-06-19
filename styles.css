@@ -4594,7 +4594,8 @@ html[data-theme="dark"] .comment-badge-tag.feedback { background-color: rgba(16,
 
 @media (max-width: 500px) {
   .members-grid.grid-view {
-    grid-template-columns: 1fr !important; /* 모바일 세로 좁은 화면 -> 1열 */
+    grid-template-columns: repeat(2, 1fr) !important; /* 모바일 세로 좁은 화면 -> 2열 유지 */
+    gap: 0.5rem !important;
   }
 }
 
