@@ -2653,13 +2653,12 @@ function renderMembersGrid(resetLimit = false) {
   // 카드 그리기
   const visibleMembers = filtered.slice(0, state.membersLimit);
 
-  // 쿠팡 광고 카드를 동적 인덱스(첫 줄 마지막 칸)에 삽입
+  // 쿠팡 광고 카드를 동적 인덱스에 삽입 (카드형은 9번째, 리스트형은 6번째)
   const itemsToRender = [...visibleMembers];
   if (itemsToRender.length > 0) {
-    const cols = getGridCols();
-    let adIndex = cols - 1; // 첫 번째 줄 마지막 칸 (0-indexed)
-    if (cols === 1) {
-      adIndex = 1; // 모바일 1열일 때는 2번째 자리에 노출
+    let adIndex = 8; // 기본 카드형(grid)은 9번째 (0-indexed 8)
+    if (state.viewMode === 'list') {
+      adIndex = 5; // 리스트형(list)은 6번째 (0-indexed 5)
     }
     const insertPos = Math.min(adIndex, itemsToRender.length);
     itemsToRender.splice(insertPos, 0, { isAd: true });
