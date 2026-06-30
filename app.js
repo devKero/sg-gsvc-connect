@@ -993,7 +993,9 @@ function setupEventListeners() {
   document.getElementById('viewToggleList').addEventListener('click', () => switchViewMode('list'));
 
   // 모달 닫기 버튼
-  document.getElementById('closeModalBtn').addEventListener('click', closeProfileModal);
+  document.getElementById('closeModalBtn').addEventListener('click', () => {
+    goBackOrRedirect('#/directory');
+  });
   
   // 모달 외부 영역 클릭 시 닫기 (단, 프로필 편집 중일 때는 실수로 닫히지 않도록 차단)
   document.getElementById('profileModal').addEventListener('click', (e) => {
@@ -1002,7 +1004,7 @@ function setupEventListeners() {
       if (editModeEl && !editModeEl.classList.contains('hidden')) {
         return; // 편집 진행 중이면 닫기 무시
       }
-      closeProfileModal();
+      goBackOrRedirect('#/directory');
     }
   });
 
@@ -1023,8 +1025,7 @@ function setupEventListeners() {
   if (sidebarEditBtn) {
     sidebarEditBtn.addEventListener('click', () => {
       if (state.currentUser && !state.currentUser.isGuest) {
-        openProfileModal(state.currentUser.id);
-        enableEditMode();
+        window.location.hash = '#/profile?id=' + state.currentUser.id + '&edit=true';
       }
     });
   }
@@ -1088,9 +1089,9 @@ function setupEventListeners() {
     navAdminBtn.addEventListener('click', () => {
       if (state.isAdmin) {
         if (state.activeMainTab === 'directory') {
-          switchToAdminDashboard();
+          window.location.hash = '#/admin';
         } else {
-          switchToDirectory();
+          window.location.hash = '#/directory';
         }
       }
     });
@@ -1098,7 +1099,9 @@ function setupEventListeners() {
 
   const backToDirBtn = document.getElementById('backToDirectoryBtn');
   if (backToDirBtn) {
-    backToDirBtn.addEventListener('click', switchToDirectory);
+    backToDirBtn.addEventListener('click', () => {
+      window.location.hash = '#/directory';
+    });
   }
 
   const adminAddBtn = document.getElementById('adminAddMemberBtn');
@@ -1334,15 +1337,21 @@ function setupEventListeners() {
   // --- 운영진 문의 관련 리스너 ---
   const navInquiryBtn = document.getElementById('navInquiryBtn');
   if (navInquiryBtn) {
-    navInquiryBtn.addEventListener('click', openInquiryModal);
+    navInquiryBtn.addEventListener('click', () => {
+      window.location.hash = '#/inquiry';
+    });
   }
   const closeInquiryModalBtn = document.getElementById('closeInquiryModalBtn');
   if (closeInquiryModalBtn) {
-    closeInquiryModalBtn.addEventListener('click', closeInquiryModal);
+    closeInquiryModalBtn.addEventListener('click', () => {
+      goBackOrRedirect('#/directory');
+    });
   }
   const btnCancelInquiry = document.getElementById('btnCancelInquiry');
   if (btnCancelInquiry) {
-    btnCancelInquiry.addEventListener('click', closeInquiryModal);
+    btnCancelInquiry.addEventListener('click', () => {
+      goBackOrRedirect('#/directory');
+    });
   }
   const inquiryModal = document.getElementById('inquiryModal');
   if (inquiryModal) {
@@ -1437,28 +1446,28 @@ function setupEventListeners() {
   const btnDirectMessageInbox = document.getElementById('btnDirectMessageInbox');
   if (btnDirectMessageInbox) {
     btnDirectMessageInbox.addEventListener('click', () => {
-      state.activeDmOpponentId = "";
-      openDmInboxModal();
+      window.location.hash = '#/dm';
     });
   }
   // 쪽지함 닫기 버튼 클릭
   const closeDmInboxModalBtn = document.getElementById('closeDmInboxModalBtn');
   if (closeDmInboxModalBtn) {
-    closeDmInboxModalBtn.addEventListener('click', closeDmInboxModal);
+    closeDmInboxModalBtn.addEventListener('click', () => {
+      goBackOrRedirect('#/directory');
+    });
   }
   // 쪽지함 모달 바깥 영역 클릭 시 닫기
   const dmInboxModal = document.getElementById('dmInboxModal');
   if (dmInboxModal) {
     dmInboxModal.addEventListener('click', (e) => {
-      if (e.target.id === 'dmInboxModal') closeDmInboxModal();
+      if (e.target.id === 'dmInboxModal') goBackOrRedirect('#/directory');
     });
   }
   // 목록으로 돌아가기 버튼 클릭
   const btnDmBackToList = document.getElementById('btnDmBackToList');
   if (btnDmBackToList) {
     btnDmBackToList.addEventListener('click', () => {
-      state.activeDmOpponentId = "";
-      renderDmInbox();
+      window.location.hash = '#/dm';
     });
   }
 
@@ -1974,6 +1983,7 @@ function handleLogout() {
   const navAdminBtn = document.getElementById('navAdminTabBtn');
   if (navAdminBtn) navAdminBtn.classList.remove('active');
   
+  window.location.hash = '';
   showLoginGate();
 }
 
@@ -2007,6 +2017,9 @@ function enterDashboard() {
 
   // 실시간 쪽지 폴링 시작
   startDmPolling();
+
+  // 최초 라우팅 처리
+  initRouter();
 }
 
 // 사용자 로그인 상태에 따른 UI 동기화
@@ -2423,8 +2436,7 @@ function renderAdminDashboard() {
     } else {
       // 2) 편집 버튼 이벤트
       tr.querySelector('.admin-edit-btn').addEventListener('click', () => {
-        openProfileModal(member.id, true);
-        enableEditMode();
+        window.location.hash = '#/profile?id=' + member.id + '&fromAdmin=true';
       });
 
       // 3) 비밀번호 초기화 버튼 이벤트
@@ -2744,15 +2756,14 @@ function renderMembersGrid(resetLimit = false) {
 
     // 상세 보기 버튼 클릭
     card.querySelector('.btn-view-profile').addEventListener('click', () => {
-      openProfileModal(member.id);
+      window.location.hash = '#/profile?id=' + member.id;
     });
 
     // 쪽지 보내기 버튼 클릭
     if (canSendDm) {
       card.querySelector('.btn-card-send-dm').addEventListener('click', (e) => {
         e.stopPropagation();
-        state.activeDmOpponentId = member.id;
-        openDmInboxModal();
+        window.location.hash = '#/dm?opponentId=' + member.id;
       });
     }
 
@@ -2761,7 +2772,7 @@ function renderMembersGrid(resetLimit = false) {
     card.addEventListener('click', (e) => {
       // 카드 내부 인터랙티브 요소 클릭 시에는 무시
       if (e.target.closest('.copy-email-btn, .contact-icon, .btn-view-profile, .btn-card-send-dm, a')) return;
-      openProfileModal(member.id);
+      window.location.hash = '#/profile?id=' + member.id;
     });
 
     gridContainer.appendChild(card);
@@ -4476,7 +4487,7 @@ function updateNotifications() {
       item.addEventListener('click', () => {
         const popover = document.getElementById('notifPopover');
         if (popover) popover.classList.add('hidden');
-        openProfileModal(myId);
+        window.location.hash = '#/profile?id=' + myId;
       });
     } else if (notif.type === 'inquiry') {
       let previewText = notif.message || "";
@@ -6481,3 +6492,158 @@ function showToast(message, isSuccess = true) {
     toastEl.classList.remove('show');
   }, 2500);
 }
+
+// ==================== SPA 라우팅 및 History 제어 ====================
+
+// 라우터 초기화
+function initRouter() {
+  if (window.isRouterInitialized) {
+    handleRouting();
+    return;
+  }
+  
+  window.addEventListener('hashchange', handleRouting);
+  window.isRouterInitialized = true;
+  
+  handleRouting();
+}
+
+// 해시 파싱 헬퍼 함수
+function parseHash(hashString) {
+  // 예: "#/profile?id=123&fromAdmin=true"
+  const cleanedHash = hashString.startsWith('#') ? hashString.substring(1) : hashString;
+  const parts = cleanedHash.split('?');
+  const path = parts[0] || '/directory';
+  const params = {};
+  
+  if (parts[1]) {
+    const paramParts = parts[1].split('&');
+    paramParts.forEach(part => {
+      const keyValue = part.split('=');
+      if (keyValue[0]) {
+        const key = decodeURIComponent(keyValue[0]);
+        const value = decodeURIComponent(keyValue[1] || '');
+        params[key] = value;
+      }
+    });
+  }
+  
+  return { path, params };
+}
+
+// 닫기 버튼 공용 백 네비게이션 함수
+function goBackOrRedirect(fallbackHash = '#/directory') {
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.location.hash = fallbackHash;
+  }
+}
+
+// 실제 라우팅 분기 처리
+function handleRouting() {
+  const loginGate = document.getElementById('loginGate');
+  if (loginGate && !loginGate.classList.contains('hidden')) {
+    return;
+  }
+
+  const currentHash = window.location.hash || '#/directory';
+  
+  // 해시 포맷 정규화 (예: "#directory" -> "#/directory")
+  if (!currentHash.startsWith('#/')) {
+    const clean = currentHash.replace('#', '');
+    window.location.hash = '#/' + (clean || 'directory');
+    return;
+  }
+
+  const { path, params } = parseHash(currentHash);
+  const user = state.currentUser;
+  if (!user) {
+    showLoginGate();
+    return;
+  }
+
+  // 모달 간의 클린업 처리 (현재 진입한 경로가 아닌 모달은 닫는다)
+  if (path !== '/profile') {
+    closeProfileModal();
+  }
+  if (path !== '/dm') {
+    closeDmInboxModal();
+  }
+  if (path !== '/inquiry') {
+    closeInquiryModal();
+  }
+
+  switch (path) {
+    case '/directory':
+      switchToDirectory();
+      break;
+      
+    case '/admin':
+      if (!state.isAdmin) {
+        alert("관리자 권한이 없습니다.");
+        window.location.hash = '#/directory';
+        return;
+      }
+      switchToAdminDashboard();
+      break;
+      
+    case '/profile':
+      const profileId = params.id;
+      if (!profileId) {
+        window.location.hash = '#/directory';
+        return;
+      }
+      
+      const member = state.members.find(m => m.id === profileId);
+      if (!member) {
+        alert("존재하지 않는 회원입니다.");
+        window.location.hash = '#/directory';
+        return;
+      }
+
+      if (params.fromAdmin === 'true') {
+        switchToAdminDashboard();
+        openProfileModal(profileId, true);
+        enableEditMode();
+      } else {
+        switchToDirectory();
+        openProfileModal(profileId, false);
+        if (params.edit === 'true') {
+          enableEditMode();
+        }
+      }
+      break;
+      
+    case '/dm':
+      if (user.isGuest) {
+        alert("게스트 계정은 쪽지 기능을 사용할 수 없습니다.");
+        window.location.hash = '#/directory';
+        return;
+      }
+      switchToDirectory();
+      
+      if (params.opponentId) {
+        state.activeDmOpponentId = params.opponentId;
+      } else {
+        state.activeDmOpponentId = "";
+      }
+      openDmInboxModal();
+      break;
+      
+    case '/inquiry':
+      if (user.isGuest) {
+        alert("게스트 계정은 운영진 문의 기능을 사용할 수 없습니다.");
+        window.location.hash = '#/directory';
+        return;
+      }
+      switchToDirectory();
+      openInquiryModal();
+      break;
+
+    default:
+      window.location.hash = '#/directory';
+      break;
+  }
+}
+
